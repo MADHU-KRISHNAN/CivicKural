@@ -1,0 +1,162 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Samvad Civic App Design System - All colors MUST be HSL */
+
+@layer base {
+  :root {
+    /* Base colors */
+    --background: 240 10% 99%;
+    --foreground: 220 15% 15%;
+
+    /* Card system */
+    --card: 240 10% 99%;
+    --card-foreground: 220 15% 15%;
+
+    /* Popover system */
+    --popover: 240 10% 99%;
+    --popover-foreground: 220 15% 15%;
+
+    /* Primary civic blue */
+    --primary: 214 84% 56%;
+    --primary-foreground: 240 10% 99%;
+    --primary-hover: 214 84% 48%;
+    --primary-light: 214 84% 92%;
+
+    /* Secondary civic green */
+    --secondary: 142 71% 45%;
+    --secondary-foreground: 240 10% 99%;
+    --secondary-hover: 142 71% 38%;
+    --secondary-light: 142 71% 92%;
+
+    /* Success green */
+    --success: 142 71% 45%;
+    --success-foreground: 240 10% 99%;
+    --success-light: 142 71% 92%;
+
+    /* Warning amber */
+    --warning: 38 92% 50%;
+    --warning-foreground: 240 10% 99%;
+    --warning-light: 38 92% 92%;
+
+    /* Error red */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 240 10% 99%;
+    --destructive-light: 0 84% 92%;
+
+    /* Neutral grays */
+    --muted: 220 15% 96%;
+    --muted-foreground: 220 15% 45%;
+    --accent: 220 15% 96%;
+    --accent-foreground: 220 15% 15%;
+
+    /* Form elements */
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 214 84% 56%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(214 84% 56%), hsl(214 84% 48%));
+    --gradient-secondary: linear-gradient(135deg, hsl(142 71% 45%), hsl(142 71% 38%));
+    --gradient-hero: linear-gradient(135deg, hsl(214 84% 56%) 0%, hsl(142 71% 45%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(240 10% 99%) 0%, hsl(220 15% 98%) 100%);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(220 15% 15% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(220 15% 15% / 0.1), 0 2px 4px -1px hsl(220 15% 15% / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(220 15% 15% / 0.1), 0 4px 6px -2px hsl(220 15% 15% / 0.05);
+    --shadow-civic: 0 8px 25px -5px hsl(214 84% 56% / 0.15);
+
+    /* Sidebar (keeping original for compatibility) */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    /* Dark mode civic colors */
+    --background: 220 15% 9%;
+    --foreground: 240 10% 95%;
+
+    --card: 220 15% 12%;
+    --card-foreground: 240 10% 95%;
+
+    --popover: 220 15% 12%;
+    --popover-foreground: 240 10% 95%;
+
+    --primary: 214 84% 60%;
+    --primary-foreground: 220 15% 9%;
+    --primary-hover: 214 84% 52%;
+    --primary-light: 214 84% 15%;
+
+    --secondary: 142 71% 50%;
+    --secondary-foreground: 220 15% 9%;
+    --secondary-hover: 142 71% 42%;
+    --secondary-light: 142 71% 15%;
+
+    --success: 142 71% 50%;
+    --success-foreground: 220 15% 9%;
+    --success-light: 142 71% 15%;
+
+    --warning: 38 92% 55%;
+    --warning-foreground: 220 15% 9%;
+    --warning-light: 38 92% 15%;
+
+    --destructive: 0 84% 65%;
+    --destructive-foreground: 220 15% 9%;
+    --destructive-light: 0 84% 15%;
+
+    --muted: 220 15% 18%;
+    --muted-foreground: 220 15% 65%;
+    --accent: 220 15% 18%;
+    --accent-foreground: 240 10% 95%;
+
+    --border: 220 15% 24%;
+    --input: 220 15% 24%;
+    --ring: 214 84% 60%;
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+@layer components {
+  /* Utility classes using design system */
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+  
+  .gradient-secondary {
+    background: var(--gradient-secondary);
+  }
+  
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+  
+  .shadow-civic {
+    box-shadow: var(--shadow-civic);
+  }
+}

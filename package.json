@@ -1,0 +1,21 @@
+{
+  "name": "civickural-root",
+  "version": "2.1.0",
+  "description": "CivicKural — AI-Powered Civic Governance & Grievance Platform",
+  "main": "backend/src/server.js",
+  "scripts": {
+    "start": "cd backend && npm install && npm start",
+    "build": "cd backend && npm install",
+    "dev": "cd backend && npm run dev"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MADHU-KRISHNAN/CivicKural.git"
+  },
+  "author": "Madhu Krishnan (https://github.com/MADHU-KRISHNAN/CivicKural)",
+  "license": "MIT"
+}
