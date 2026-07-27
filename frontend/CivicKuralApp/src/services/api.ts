@@ -330,15 +330,28 @@ class ApiService {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
+
       const response = await fetch(`${BASE_URL}${endpoint}`, {
         ...options,
         headers,
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: `HTTP error ${response.status}`,
+        };
+      }
 
       const data = await response.json();
       return data;
     } catch (error) {
-      console.warn('Backend unavailable, using demo mode fallback:', error);
+      console.warn('Backend unavailable or request timed out, using demo mode fallback:', error);
       return {
         success: false,
         error: 'Network error or server unavailable'
