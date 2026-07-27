@@ -399,6 +399,7 @@ class ApiService {
       };
 
       localStorage.setItem('civickural_token', authToken);
+      localStorage.setItem('auth_token', authToken);
       localStorage.setItem('civickural_user', JSON.stringify(normalizedUser));
       localStorage.setItem('user', JSON.stringify(normalizedUser));
       return {
@@ -422,6 +423,7 @@ class ApiService {
     const mockToken = 'demo-token-' + Date.now();
 
     localStorage.setItem('civickural_token', mockToken);
+    localStorage.setItem('auth_token', mockToken);
     localStorage.setItem('civickural_user', JSON.stringify(mockUser));
     localStorage.setItem('user', JSON.stringify(mockUser));
 

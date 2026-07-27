@@ -36,7 +36,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
     );
   }
 
-  const token = localStorage.getItem('auth_token');
+  const token = localStorage.getItem('civickural_token') || localStorage.getItem('auth_token');
 
   // 1. Unauthenticated check -> Redirect to /login
   if (!token || !user) {
