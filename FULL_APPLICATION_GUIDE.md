@@ -29,6 +29,6 @@ npm run dev
 
 | Role | Email | Password | Platform Access |
 |------|-------|----------|-----------------|
-| Citizen User | `citizen@example.com` | `password123` | Citizen Dashboard & Issue Reporting |
-| Municipal Admin | `admin@civickural.gov.in` | `admin` | Executive Control Center & Heatmaps |
-| Field Staff Inspector | `rajesh.mod@civickural.gov.in` | `password123` | Triage & Dispatch Table |
+| Citizen User | `citizen@example.com` | `CivicKural#2026!` | Citizen Dashboard & Issue Reporting |
+| Municipal Admin | `admin@civickural.gov.in` | `CivicKural#2026!` | Executive Control Center & Heatmaps |
+| Field Staff Inspector | `rajesh.mod@civickural.gov.in` | `CivicKural#2026!` | Triage & Dispatch Table |

@@ -368,7 +368,7 @@ class ApiService {
   async login(email: string, userType: UserRole = 'citizen', password?: string): Promise<ApiResponse<{ user: User; token: string }>> {
     const response = await this.makeRequest<{ user: User; token: string }>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password: password || 'password123', userType, role: userType }),
+      body: JSON.stringify({ email, password: password || 'CivicKural#2026!', userType, role: userType }),
     });
 
     if (response.success && (response.data || (response as any).user)) {
@@ -437,7 +437,7 @@ class ApiService {
       body: JSON.stringify({
         name: registerData.name,
         email: registerData.email,
-        password: registerData.password || 'password123',
+        password: registerData.password || 'CivicKural#2026!',
         role: roleToUse,
         phone: registerData.phone || '+91 9876543210',
         department: registerData.department,

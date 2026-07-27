@@ -78,7 +78,7 @@ export const LoginScreen: React.FC = () => {
     setErrorMessage('');
     const demoEmail = demoRole === 'admin' ? 'admin@civickural.gov.in' : demoRole === 'staff' ? 'rajesh.mod@civickural.gov.in' : 'citizen@example.com';
     try {
-      const res = await apiService.login(demoEmail, demoRole, 'password123');
+      const res = await apiService.login(demoEmail, demoRole, 'CivicKural#2026!');
       if (res.success && res.data) {
         const target = redirectPath || (demoRole === 'admin' || demoRole === 'staff' ? '/admin' : '/dashboard');
         navigate(target, { replace: true });

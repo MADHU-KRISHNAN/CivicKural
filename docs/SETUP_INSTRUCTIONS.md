@@ -24,6 +24,6 @@ npm run dev
 ```
 
 ### 3. Demo Credentials
-- **Admin Control Center:** `admin@civickural.gov.in` / `admin`
-- **Field Staff Officer:** `rajesh.mod@civickural.gov.in` / `password123`
-- **Citizen Account:** `citizen@example.com` / `password123`
+- **Admin Control Center:** `admin@civickural.gov.in` / `CivicKural#2026!`
+- **Field Staff Officer:** `rajesh.mod@civickural.gov.in` / `CivicKural#2026!`
+- **Citizen Account:** `citizen@example.com` / `CivicKural#2026!`
