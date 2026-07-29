@@ -181,66 +181,7 @@ export const LoginScreen: React.FC = () => {
               />
             </div>
 
-            {/* Account Role Selector */}
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Account Portal Role</label>
-              <div style={styles.roleGrid}>
-                <button
-                  type="button"
-                  style={{
-                    ...styles.roleBtn,
-                    ...(role === 'citizen' ? styles.roleBtnActive : {}),
-                  }}
-                  onClick={() => setRole('citizen')}
-                >
-                  <span>👤</span>
-                  <span>Citizen</span>
-                </button>
-
-                <button
-                  type="button"
-                  style={{
-                    ...styles.roleBtn,
-                    ...(role === 'staff' ? styles.roleBtnActive : {}),
-                  }}
-                  onClick={() => setRole('staff')}
-                >
-                  <span>👷</span>
-                  <span>Municipal Staff</span>
-                </button>
-
-                <button
-                  type="button"
-                  style={{
-                    ...styles.roleBtn,
-                    ...(role === 'admin' ? styles.roleBtnActive : {}),
-                  }}
-                  onClick={() => setRole('admin')}
-                >
-                  <span>🛡️</span>
-                  <span>Administrator</span>
-                </button>
-              </div>
-            </div>
-
-            {(role === 'staff' || role === 'admin') && mode === 'register' && (
-              <div style={styles.inputGroup}>
-                <label style={styles.label} htmlFor="department-input">Assigned Department</label>
-                <select
-                  id="department-input"
-                  style={styles.input}
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  disabled={loading}
-                >
-                  <option value="Sanitation Oversight">Sanitation & Public Hygiene</option>
-                  <option value="Utility Services">Service Delivery & Utilities</option>
-                  <option value="Administrative Cell">Administrative & Civil Services</option>
-                  <option value="Vigilance Bureau">Vigilance & Anti-Corruption</option>
-                  <option value="Public Works Dept">Public Works & Infrastructure</option>
-                </select>
-              </div>
-            )}
+            {/* Role and Department selectors removed for security. New users default to citizen. Roles are determined by the backend upon login. */}
 
             <button
               type="submit"

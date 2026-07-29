@@ -6,18 +6,26 @@ import CategoryBadge from '../components/CategoryBadge';
 import AudioRecorder from '../components/AudioRecorder';
 import offlineStorage from '../services/offlineStorage';
 
-const MANDATED_CATEGORIES: { name: IssueCategory; desc: string }[] = [
-  { name: 'Sanitary & Public Hygiene', desc: 'Garbage dump accumulation, sewage overflow, public toilet maintenance' },
-  { name: 'Service Delivery Deficiencies', desc: 'Water supply disruptions, streetlight outages, transit flaws, power issues' },
-  { name: 'Administrative Delays and Maladministration', desc: 'Stalled certificate clearance, unhandled NOCs, procedural delays' },
-  { name: 'Abuse of Power or Corruption', desc: 'Bribery demands, illegal extortion, misuse of official authority' },
-  { name: 'Systemic and Policy Issues', desc: 'Accessibility hazards, urban planning flaws, policy oversights' },
-];
+const detectCategoryFromText = (titleText: string, descText: string): IssueCategory => {
+  const combined = `${titleText} ${descText}`.toLowerCase();
+  if (combined.includes('bribe') || combined.includes('extortion') || combined.includes('fraud') || combined.includes('corruption') || combined.includes('official')) {
+    return 'Abuse of Power or Corruption';
+  }
+  if (combined.includes('water') || combined.includes('light') || combined.includes('power') || combined.includes('electricity') || combined.includes('outage') || combined.includes('bus') || combined.includes('transit')) {
+    return 'Service Delivery Deficiencies';
+  }
+  if (combined.includes('delay') || combined.includes('pending') || combined.includes('certificate') || combined.includes('zonal') || combined.includes('noc') || combined.includes('file')) {
+    return 'Administrative Delays and Maladministration';
+  }
+  if (combined.includes('road') || combined.includes('pothole') || combined.includes('traffic') || combined.includes('ramp') || combined.includes('accessibility') || combined.includes('intersection')) {
+    return 'Systemic and Policy Issues';
+  }
+  return 'Sanitary & Public Hygiene';
+};
 
 export const ReportIssuePage: React.FC = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<IssueCategory>('Sanitary & Public Hygiene');
   const [submitting, setSubmitting] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
@@ -100,13 +108,14 @@ export const ReportIssuePage: React.FC = () => {
       ? `${description.trim()}\n\n[🎤 Voice Note Attached]`
       : description.trim();
 
+    const autoCategory = detectCategoryFromText(title.trim(), description.trim());
+
     if (isOffline) {
-      // Offline fallback saving via IndexedDB/offlineStorage
       try {
         await offlineStorage.saveOfflineReport({
           title: title.trim(),
           description: fullDescription,
-          category,
+          category: autoCategory,
           latitude: finalLat,
           longitude: finalLng,
           address: finalAddress,
@@ -117,7 +126,7 @@ export const ReportIssuePage: React.FC = () => {
 
         setStatusNotification({
           type: 'warning',
-          text: '📡 You are currently offline. Report saved locally! It will automatically upload when your internet connection is restored.',
+          text: `📡 You are currently offline. Report auto-classified as "${autoCategory}" & saved locally!`,
         });
 
         setTimeout(() => {
@@ -131,12 +140,11 @@ export const ReportIssuePage: React.FC = () => {
       return;
     }
 
-    // Online submission
     try {
       const issueData = {
         title: title.trim(),
         description: fullDescription,
-        category: category,
+        category: autoCategory,
         latitude: finalLat,
         longitude: finalLng,
         address: finalAddress,
@@ -158,11 +166,10 @@ export const ReportIssuePage: React.FC = () => {
         setStatusNotification({ type: 'error', text: response.error || 'Failed to submit grievance' });
       }
     } catch (error) {
-      // Save offline on network error
       await offlineStorage.saveOfflineReport({
         title: title.trim(),
         description: fullDescription,
-        category,
+        category: autoCategory,
         latitude: finalLat,
         longitude: finalLng,
         address: finalAddress,
@@ -184,12 +191,12 @@ export const ReportIssuePage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '30px 20px', maxWidth: '780px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
-      <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-        <h1 style={{ fontSize: '30px', fontWeight: '900', color: '#0f172a', marginBottom: '8px' }}>
-          File a Civic Grievance 📢
+    <div className="page-wrapper-narrow">
+      <div className="section-header text-center">
+        <h1 className="section-title">
+          File a Civic Grievance
         </h1>
-        <p style={{ color: '#64748b', fontSize: '15px' }}>
+        <p className="section-subtitle">
           Multimodal intake: Text, Voice Notes, Photos & Precision GPS Tagging
         </p>
       </div>
@@ -197,29 +204,20 @@ export const ReportIssuePage: React.FC = () => {
       {statusNotification && (
         <div
           style={{
-            padding: '14px 18px',
-            borderRadius: '12px',
-            marginBottom: '20px',
-            fontSize: '14px',
+            padding: '1rem 1.25rem',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: '1.5rem',
+            fontSize: '0.875rem',
             fontWeight: '600',
             backgroundColor:
-              statusNotification.type === 'success'
-                ? '#dcfce7'
-                : statusNotification.type === 'warning'
-                ? '#fef3c7'
-                : '#fee2e2',
+              statusNotification.type === 'success' ? 'var(--color-success-light)' :
+              statusNotification.type === 'warning' ? 'var(--color-warning-light)' : 'var(--color-danger-light)',
             color:
-              statusNotification.type === 'success'
-                ? '#15803d'
-                : statusNotification.type === 'warning'
-                ? '#b45309'
-                : '#b91c1c',
+              statusNotification.type === 'success' ? 'var(--color-success-dark)' :
+              statusNotification.type === 'warning' ? 'var(--color-warning-dark)' : 'var(--color-danger-dark)',
             border: `1px solid ${
-              statusNotification.type === 'success'
-                ? '#86efac'
-                : statusNotification.type === 'warning'
-                ? '#fde047'
-                : '#fca5a5'
+              statusNotification.type === 'success' ? 'rgba(16,185,129,0.2)' :
+              statusNotification.type === 'warning' ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)'
             }`,
           }}
         >
@@ -228,48 +226,17 @@ export const ReportIssuePage: React.FC = () => {
       )}
 
       <div className="glass-card">
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* Step 1: Standardized Category Selection */}
-          <div>
-            <label style={{ display: 'block', fontSize: '15px', fontWeight: '700', color: '#0f172a', marginBottom: '10px' }}>
-              1. Select Mandatory Civic Category *
-            </label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {MANDATED_CATEGORIES.map((catItem) => (
-                <label
-                  key={catItem.name}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px 16px',
-                    borderRadius: '12px',
-                    border: `2px solid ${category === catItem.name ? '#0284c7' : '#e2e8f0'}`,
-                    backgroundColor: category === catItem.name ? '#f0f9ff' : '#ffffff',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="issueCategory"
-                    value={catItem.name}
-                    checked={category === catItem.name}
-                    onChange={() => setCategory(catItem.name)}
-                    style={{ width: '18px', height: '18px', accentColor: '#0284c7' }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <CategoryBadge category={catItem.name} size="medium" />
-                    <p style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>{catItem.desc}</p>
-                  </div>
-                </label>
-              ))}
-            </div>
+        <form onSubmit={handleSubmit} className="d-flex flex-col gap-4">
+          
+          <div className="form-group">
+            <span className="badge badge-info">
+              System Categorized via AI
+            </span>
           </div>
 
-          {/* Step 2: Grievance Title */}
-          <div>
-            <label style={{ display: 'block', fontSize: '15px', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }} htmlFor="title">
+          {/* Title */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="title">
               2. Grievance Title *
             </label>
             <input
@@ -280,13 +247,13 @@ export const ReportIssuePage: React.FC = () => {
               onChange={(e) => setTitle(e.target.value)}
               disabled={submitting}
               required
-              style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '15px', boxSizing: 'border-box' }}
+              className="form-input"
             />
           </div>
 
-          {/* Step 3: Text & Voice Explanation */}
-          <div>
-            <label style={{ display: 'block', fontSize: '15px', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }} htmlFor="desc">
+          {/* Description */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="desc">
               3. Detailed Explanation (Text and/or Voice Note) *
             </label>
             <textarea
@@ -295,79 +262,79 @@ export const ReportIssuePage: React.FC = () => {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               disabled={submitting}
-              rows={3}
-              style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '15px', boxSizing: 'border-box', fontFamily: 'inherit', resize: 'vertical', marginBottom: '12px' }}
+              className="form-textarea mb-4"
             />
 
             {/* Audio Voice Note Recorder */}
             <AudioRecorder onAudioRecorded={(data) => setAudioBlob(data)} />
           </div>
 
-          {/* Step 4: Geolocation Tagging */}
-          <div>
-            <label style={{ display: 'block', fontSize: '15px', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>
+          {/* Geolocation Tagging */}
+          <div className="form-group">
+            <label className="form-label">
               4. Precision Browser GPS Geolocation Tag *
             </label>
 
-            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '14px', fontWeight: '700', color: '#16a34a' }}>
-                  📍 {location ? (location.isManual ? 'Manual Landmark Override' : 'High Accuracy GPS Tagged') : 'Location Status'}
+            <div style={{ background: 'var(--color-slate-50)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-slate-200)' }}>
+              <div className="d-flex justify-between align-center mb-2">
+                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-slate-700)' }}>
+                  {location ? (location.isManual ? 'Manual Landmark Override' : 'High Accuracy GPS Tagged') : 'Location Status'}
                 </span>
                 <button
                   type="button"
                   onClick={getLocation}
                   disabled={geoLoading || submitting}
-                  style={{ background: '#ffffff', border: '1px solid #16a34a', color: '#16a34a', padding: '5px 14px', borderRadius: '15px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                  className="btn-secondary"
+                  style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem' }}
                 >
-                  {geoLoading ? 'Acquiring GPS...' : '🔄 Re-capture Current Location'}
+                  {geoLoading ? 'Acquiring GPS...' : 'Re-capture Current Location'}
                 </button>
               </div>
 
               {location && (
-                <div style={{ marginTop: '6px' }}>
-                  <p style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a' }}>{location.address}</p>
-                  <span style={{ fontSize: '12px', color: '#64748b', fontFamily: 'monospace' }}>
+                <div className="mt-2">
+                  <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-slate-900)' }}>{location.address}</p>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-slate-500)', fontFamily: 'monospace' }}>
                     Latitude: {location.latitude.toFixed(6)}, Longitude: {location.longitude.toFixed(6)} {location.accuracy && `(±${location.accuracy}m accuracy)`}
                   </span>
                 </div>
               )}
 
               {geoError && (
-                <p style={{ color: '#dc2626', fontSize: '13px', marginTop: '6px' }}>⚠️ {geoError}</p>
+                <p style={{ color: 'var(--color-danger)', fontSize: '0.875rem', marginTop: '0.5rem' }}>{geoError}</p>
               )}
 
               {/* Manual Address Fallback */}
-              <div style={{ marginTop: '10px' }}>
+              <div className="mt-4">
                 {!isManualMode ? (
-                  <button type="button" onClick={() => setIsManualMode(true)} style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: 0 }}>
-                    ✏️ Override with manual street address
+                  <button type="button" onClick={() => setIsManualMode(true)} style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
+                    Override with manual street address
                   </button>
                 ) : (
-                  <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
+                  <div className="d-flex gap-2 mt-2">
                     <input
                       type="text"
                       placeholder="Enter street address or landmark..."
                       value={manualAddress}
                       onChange={(e) => setManualAddress(e.target.value)}
-                      style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                      className="form-input"
                     />
-                    <button type="button" onClick={handleManualLocationSave} className="btn-primary" style={{ padding: '6px 14px', fontSize: '13px' }}>Save</button>
+                    <button type="button" onClick={handleManualLocationSave} className="btn-primary">Save</button>
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Step 5: Image Attachment */}
-          <div>
-            <label style={{ display: 'block', fontSize: '15px', fontWeight: '700', color: '#0f172a', marginBottom: '8px' }}>
+          {/* Image Attachment */}
+          <div className="form-group">
+            <label className="form-label">
               5. Photo Evidence Attachment (Optional)
             </label>
 
-            <label htmlFor="photo-upload" style={{ display: 'block', border: '2px dashed #0284c7', padding: '20px', borderRadius: '12px', textAlign: 'center', cursor: 'pointer', background: '#f0f9ff' }}>
-              <span style={{ fontSize: '15px', fontWeight: '700', color: '#0284c7' }}>
-                📷 {selectedPhoto ? 'Change Selected Evidence Photo' : 'Upload Evidence Photo (Drag & Drop or Pick File)'}
+            <label htmlFor="photo-upload" style={{ display: 'block', border: '1px dashed var(--color-slate-300)', padding: '2rem', borderRadius: 'var(--radius-md)', textAlign: 'center', cursor: 'pointer', background: 'var(--color-slate-50)' }}>
+              <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-slate-700)' }}>
+                {selectedPhoto ? 'Change Selected Evidence Photo' : 'Upload Evidence Photo (Drag & Drop or Pick File)'}
               </span>
               <input
                 id="photo-upload"
@@ -379,7 +346,7 @@ export const ReportIssuePage: React.FC = () => {
               />
             </label>
             {photoPreview && (
-              <div style={{ marginTop: '12px', borderRadius: '10px', overflow: 'hidden', maxHeight: '220px', border: '1px solid #cbd5e1' }}>
+              <div className="mt-4" style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', maxHeight: '300px', border: '1px solid var(--color-slate-300)' }}>
                 <img src={photoPreview} alt="Preview" style={{ width: '100%', objectFit: 'cover' }} />
               </div>
             )}
@@ -389,10 +356,10 @@ export const ReportIssuePage: React.FC = () => {
           <button
             type="submit"
             disabled={submitting}
-            className="btn-primary"
-            style={{ width: '100%', padding: '16px', fontSize: '17px', justifyContent: 'center', marginTop: '10px' }}
+            className="btn-primary w-full justify-center mt-4"
+            style={{ padding: '1rem', fontSize: '1rem' }}
           >
-            {submitting ? <span className="spinner" /> : '🚀 Register Grievance Ticket'}
+            {submitting ? <span className="spinner" /> : 'Register Grievance Ticket'}
           </button>
         </form>
       </div>

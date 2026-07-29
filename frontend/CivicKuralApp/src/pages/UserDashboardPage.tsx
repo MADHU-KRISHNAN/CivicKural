@@ -34,97 +34,89 @@ export const UserDashboardPage: React.FC = () => {
   const resolvedCount = issues.filter((i) => i.status === 'Resolved').length;
 
   return (
-    <div style={{ padding: '30px 20px', maxWidth: '1200px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+    <div className="page-wrapper">
       {/* Header Banner */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', flexWrap: 'wrap', gap: '15px' }}>
+      <div className="section-header d-flex justify-between align-center flex-wrap gap-4">
         <div>
-          <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a' }}>
-            Welcome back, {user?.name || 'Citizen'} 👋
+          <h1 className="section-title">
+            Welcome back, {user?.name || 'Citizen'}
           </h1>
-          <p style={{ color: '#64748b', fontSize: '15px' }}>
+          <p className="section-subtitle">
             Track your submitted civic complaints and municipal updates
           </p>
         </div>
 
-        <Link to="/report" className="btn-primary" style={{ padding: '10px 20px', fontSize: '14px' }}>
-          <span>➕ Report New Issue</span>
+        <Link to="/report" className="btn-primary">
+          Report New Issue
         </Link>
       </div>
 
       {/* Stats Cards */}
-      <div className="stats-grid">
-        <div className="stat-card" style={{ borderTop: '4px solid #0284c7' }}>
-          <span className="stat-card-number">{issues.length}</span>
-          <span className="stat-card-label">Total Submissions</span>
+      <div className="grid-stats">
+        <div className="stat-card" style={{ borderTopColor: 'var(--color-primary)' }}>
+          <span className="stat-value">{issues.length}</span>
+          <span className="stat-label">Total Submissions</span>
         </div>
 
-        <div className="stat-card" style={{ borderTop: '4px solid #d97706' }}>
-          <span className="stat-card-number">{inProgressCount}</span>
-          <span className="stat-card-label">In Progress</span>
+        <div className="stat-card" style={{ borderTopColor: 'var(--color-warning)' }}>
+          <span className="stat-value">{inProgressCount}</span>
+          <span className="stat-label">In Progress</span>
         </div>
 
-        <div className="stat-card" style={{ borderTop: '4px solid #16a34a' }}>
-          <span className="stat-card-number">{resolvedCount}</span>
-          <span className="stat-card-label">Resolved</span>
+        <div className="stat-card" style={{ borderTopColor: 'var(--color-success)' }}>
+          <span className="stat-value">{resolvedCount}</span>
+          <span className="stat-label">Resolved</span>
         </div>
 
-        <div className="stat-card" style={{ borderTop: '4px solid #64748b' }}>
-          <span className="stat-card-number">{reportedCount}</span>
-          <span className="stat-card-label">Pending Review</span>
+        <div className="stat-card" style={{ borderTopColor: 'var(--color-slate-400)' }}>
+          <span className="stat-value">{reportedCount}</span>
+          <span className="stat-label">Pending Review</span>
         </div>
       </div>
 
       {/* Recent Submissions Feed */}
-      <div className="glass-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#0f172a' }}>My Submitted Grievances</h2>
-          <Link to="/issues" style={{ color: '#0284c7', fontSize: '14px', fontWeight: '600', textDecoration: 'none' }}>
-            View All →
+      <div className="glass-card mt-4">
+        <div className="d-flex justify-between align-center mb-4">
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-slate-900)' }}>My Submitted Grievances</h2>
+          <Link to="/issues" style={{ color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: 600 }}>
+            View All &rarr;
           </Link>
         </div>
 
         {loading ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
-            <span className="spinner" style={{ borderColor: 'rgba(2, 132, 199, 0.2)', borderTopColor: '#0284c7' }} />
-            <p style={{ marginTop: '10px' }}>Loading your dashboard...</p>
+          <div className="text-center mt-4">
+            <span className="spinner spinner-dark" />
+            <p className="mt-4" style={{ color: 'var(--color-slate-500)' }}>Loading your dashboard...</p>
           </div>
         ) : issues.length === 0 ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
-            <p style={{ fontSize: '16px', fontWeight: '600', marginBottom: '10px' }}>No grievances reported yet</p>
-            <p style={{ fontSize: '14px', marginBottom: '20px' }}>Notice a civic problem in your area? Report it to local authorities.</p>
+          <div className="text-center" style={{ padding: '2rem 1rem' }}>
+            <p style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--color-slate-900)', marginBottom: '0.5rem' }}>No grievances reported yet</p>
+            <p style={{ fontSize: '0.875rem', color: 'var(--color-slate-500)', marginBottom: '1.5rem' }}>Notice a civic problem in your area? Report it to local authorities.</p>
             <Link to="/report" className="btn-primary">Report an Issue</Link>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="d-flex flex-col gap-4">
             {issues.map((issue) => (
               <div
                 key={issue.id}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '16px 20px',
-                  backgroundColor: '#f8fafc',
-                  borderRadius: '12px',
-                  border: '1px solid #e2e8f0',
-                  flexWrap: 'wrap',
-                  gap: '15px',
-                  cursor: 'pointer',
-                }}
+                className="d-flex justify-between align-center flex-wrap gap-4"
+                style={{ padding: '1rem', background: 'var(--color-slate-50)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-slate-200)', cursor: 'pointer', transition: 'background-color var(--transition-fast)' }}
                 onClick={() => navigate(`/issues/${issue.id}`)}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-slate-100)')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-slate-50)')}
               >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <div className="d-flex flex-col gap-2" style={{ flex: '1' }}>
+                  <div className="d-flex align-center flex-wrap gap-2">
                     <CategoryBadge category={issue.category} size="small" />
                     <StatusBadge priority={issue.priority} type="priority" />
                   </div>
-                  <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>{issue.title}</h3>
-                  <p style={{ fontSize: '13px', color: '#64748b' }}>📍 {issue.location.address}</p>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-slate-900)' }}>{issue.title}</h3>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--color-slate-500)' }}>{issue.location.address}</p>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <div className="d-flex align-center gap-4">
                   <StatusBadge status={issue.status} />
-                  <span style={{ fontSize: '13px', color: '#94a3b8' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-slate-400)' }}>
                     {new Date(issue.createdAt).toLocaleDateString()}
                   </span>
                 </div>

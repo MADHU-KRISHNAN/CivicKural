@@ -25,11 +25,9 @@ const createReportValidation = [
     .isLength({ min: 10, max: 2000 })
     .withMessage('Description must be between 10 and 2000 characters'),
   body('category')
-    .isIn(['Pothole', 'Waste', 'Light', 'Water', 'Traffic', 'Other'])
-    .withMessage('Please select a valid category'),
+    .optional(),
   body('priority')
-    .isInt({ min: 1, max: 5 })
-    .withMessage('Priority must be between 1 and 5'),
+    .optional(),
   body('longitude')
     .isFloat({ min: -180, max: 180 })
     .withMessage('Please provide a valid longitude'),

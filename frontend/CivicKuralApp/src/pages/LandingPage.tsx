@@ -20,79 +20,69 @@ export const LandingPage: React.FC = () => {
   const inProgressCount = issues.filter((i) => i.status === 'In Progress').length;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#f8fafc', width: '100%' }}>
+    <div className="w-full">
       {/* Full Width Hero Section */}
-      <section className="hero-banner">
-        <span style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '1.5px', background: 'rgba(255,255,255,0.15)', padding: '6px 18px', borderRadius: '20px', fontWeight: '700', marginBottom: '22px', display: 'inline-block' }}>
-          🇮🇳 CivicKural Platform
-        </span>
-        <h1 className="hero-title">
-          Empowering Citizens.<br />Accelerating Public Resolution.
-        </h1>
-        <p className="hero-subtitle">
-          Direct civic engagement platform connecting citizens with municipal authorities for transparent, AI-categorized grievance tracking and real-time resolution.
-        </p>
+      <section className="hero-section">
+        <div className="relative z-10">
+          <span className="hero-pill">
+            CivicKural Platform
+          </span>
+          <h1 className="hero-title">
+            Empowering Citizens.<br />Accelerating Public Resolution.
+          </h1>
+          <p className="hero-subtitle">
+            Direct civic engagement platform connecting citizens with municipal authorities for transparent, AI-categorized grievance tracking and real-time resolution.
+          </p>
 
-        <div className="hero-cta-group">
-          <Link to="/report" className="btn-primary">
-            <span>📢 Report an Issue</span>
-          </Link>
-          <Link to="/issues" className="btn-secondary">
-            <span>🔍 Explore Community Reports</span>
-          </Link>
+          <div className="hero-actions">
+            <Link to="/report" className="btn-primary">
+              Report an Issue
+            </Link>
+            <Link to="/issues" className="btn-secondary">
+              Explore Community Reports
+            </Link>
+          </div>
         </div>
       </section>
 
       {/* Main Content Fluid Wrapper */}
-      <div style={{ width: '100%', margin: '-40px 0 40px 0', padding: '0 45px', boxSizing: 'border-box', zIndex: 10 }}>
+      <div className="page-wrapper" style={{ marginTop: '-40px', position: 'relative', zIndex: 10 }}>
         {/* Metric Cards */}
-        <div className="stats-grid">
-          <div className="stat-card" style={{ borderTop: '4px solid #0284c7' }}>
-            <div className="stat-card-icon" style={{ background: '#e0f2fe', color: '#0284c7' }}>
-              📊
-            </div>
-            <span className="stat-card-number">{totalCount || 15}</span>
-            <span className="stat-card-label">Total Reported Grievances</span>
+        <div className="grid-stats">
+          <div className="stat-card" style={{ borderTopColor: 'var(--color-info)' }}>
+            <span className="stat-value">{totalCount || 15}</span>
+            <span className="stat-label">Total Reported Grievances</span>
           </div>
 
-          <div className="stat-card" style={{ borderTop: '4px solid #16a34a' }}>
-            <div className="stat-card-icon" style={{ background: '#dcfce7', color: '#16a34a' }}>
-              ✅
-            </div>
-            <span className="stat-card-number">{resolvedCount || 10}</span>
-            <span className="stat-card-label">Successfully Resolved</span>
+          <div className="stat-card" style={{ borderTopColor: 'var(--color-success)' }}>
+            <span className="stat-value">{resolvedCount || 10}</span>
+            <span className="stat-label">Successfully Resolved</span>
           </div>
 
-          <div className="stat-card" style={{ borderTop: '4px solid #d97706' }}>
-            <div className="stat-card-icon" style={{ background: '#fef3c7', color: '#d97706' }}>
-              ⚡
-            </div>
-            <span className="stat-card-number">{inProgressCount || 4}</span>
-            <span className="stat-card-label">Currently In Progress</span>
+          <div className="stat-card" style={{ borderTopColor: 'var(--color-warning)' }}>
+            <span className="stat-value">{inProgressCount || 4}</span>
+            <span className="stat-label">Currently In Progress</span>
           </div>
 
-          <div className="stat-card" style={{ borderTop: '4px solid #9333ea' }}>
-            <div className="stat-card-icon" style={{ background: '#f3e8ff', color: '#9333ea' }}>
-              ⏱️
-            </div>
-            <span className="stat-card-number">24 Hours</span>
-            <span className="stat-card-label">Avg Response Time</span>
+          <div className="stat-card" style={{ borderTopColor: 'var(--color-primary)' }}>
+            <span className="stat-value">24 Hrs</span>
+            <span className="stat-label">Avg Response Time</span>
           </div>
         </div>
       </div>
 
       {/* Mandatory Standard Categories Section */}
-      <section style={{ width: '100%', padding: '0 45px', marginBottom: '60px', boxSizing: 'border-box' }}>
-        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <h2 style={{ fontSize: '30px', fontWeight: '900', color: '#0f172a', marginBottom: '10px' }}>
+      <section className="page-wrapper mb-4">
+        <div className="section-header text-center">
+          <h2 className="section-title">
             Mandated Standardized Issue Categories
           </h2>
-          <p style={{ color: '#64748b', fontSize: '16px' }}>
+          <p className="section-subtitle">
             Categorized grievances for targeted routing to specialized municipal departments
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+        <div className="grid-cards">
           {[
             {
               cat: 'Sanitary & Public Hygiene' as const,
@@ -117,14 +107,14 @@ export const LandingPage: React.FC = () => {
           ].map((item, idx) => (
             <div
               key={idx}
-              className="glass-card"
-              style={{ display: 'flex', flexDirection: 'column', gap: '14px', cursor: 'pointer' }}
+              className="glass-card d-flex flex-col gap-2"
+              style={{ cursor: 'pointer' }}
               onClick={() => navigate('/issues')}
             >
               <div>
                 <CategoryBadge category={item.cat} size="large" />
               </div>
-              <p style={{ fontSize: '14px', color: '#475569', lineHeight: '1.6' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-slate-600)', marginTop: '0.5rem' }}>
                 {item.desc}
               </p>
             </div>
@@ -133,15 +123,15 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* Citizen Call to Action */}
-      <section style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', color: '#fff', padding: '70px 45px', textAlign: 'center', marginTop: 'auto', width: '100%', boxSizing: 'border-box' }}>
-        <h2 style={{ fontSize: '34px', fontWeight: '900', marginBottom: '16px' }}>
+      <section style={{ background: 'var(--color-slate-900)', color: 'white', padding: '4rem 2rem', textAlign: 'center', marginTop: 'auto' }}>
+        <h2 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '1rem' }}>
           Ready to Make Your Community Better?
         </h2>
-        <p style={{ color: '#cbd5e1', fontSize: '17px', maxWidth: '650px', margin: '0 auto 35px auto' }}>
+        <p style={{ color: 'var(--color-slate-300)', fontSize: '1.125rem', maxWidth: '700px', margin: '0 auto 2rem auto' }}>
           Submit your civic issue in under 30 seconds with automatic GPS tagging and live resolution updates.
         </p>
-        <Link to="/report" className="btn-primary" style={{ fontSize: '18px', padding: '16px 42px' }}>
-          <span>🚀 File a Grievance Now</span>
+        <Link to="/report" className="btn-primary" style={{ fontSize: '1.125rem', padding: '1rem 2rem' }}>
+          File a Grievance Now
         </Link>
       </section>
     </div>

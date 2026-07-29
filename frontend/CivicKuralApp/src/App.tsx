@@ -47,55 +47,76 @@ function HeaderNavigation() {
     <>
       {/* Top Header Navbar for Desktop/Laptop */}
       <header className="desktop-navbar">
-        <NavLink to="/" className="brand-logo">
-          <span style={{ fontSize: '26px' }}>🏛️</span>
+        <NavLink to={isAdminOrStaff ? '/admin' : '/'} className="brand-logo">
+          <span style={{ fontSize: '1.5rem' }}>🏛️</span>
           <span className="brand-title">CivicKural</span>
           <span className="brand-badge">AI Platform</span>
         </NavLink>
 
         <nav className="desktop-nav-links">
-          <NavLink
-            to="/"
-            className={({ isActive }) => `desktop-nav-item ${isActive ? 'active' : ''}`}
-          >
-            <span>🏠</span>
-            <span>Home</span>
-          </NavLink>
+          {!isAdminOrStaff ? (
+            <>
+              <NavLink
+                to="/"
+                className={({ isActive }) => `desktop-nav-item ${isActive ? 'active' : ''}`}
+              >
+                <span>🏠</span>
+                <span>Home</span>
+              </NavLink>
 
-          <NavLink
-            to="/issues"
-            className={({ isActive }) => `desktop-nav-item ${isActive ? 'active' : ''}`}
-          >
-            <span>🌐</span>
-            <span>Explorer</span>
-          </NavLink>
+              <NavLink
+                to="/issues"
+                className={({ isActive }) => `desktop-nav-item ${isActive ? 'active' : ''}`}
+              >
+                <span>🌐</span>
+                <span>Explorer</span>
+              </NavLink>
 
-          <NavLink
-            to="/report"
-            className={({ isActive }) => `desktop-nav-item ${isActive ? 'active' : ''}`}
-          >
-            <span>📢</span>
-            <span>Report Issue</span>
-          </NavLink>
+              <NavLink
+                to="/report"
+                className={({ isActive }) => `desktop-nav-item ${isActive ? 'active' : ''}`}
+              >
+                <span>📢</span>
+                <span>Report Issue</span>
+              </NavLink>
 
-          {user && (
-            <NavLink
-              to="/dashboard"
-              className={({ isActive }) => `desktop-nav-item ${isActive ? 'active' : ''}`}
-            >
-              <span>📊</span>
-              <span>My Portal</span>
-            </NavLink>
-          )}
+              {user && (
+                <NavLink
+                  to="/dashboard"
+                  className={({ isActive }) => `desktop-nav-item ${isActive ? 'active' : ''}`}
+                >
+                  <span>📊</span>
+                  <span>My Portal</span>
+                </NavLink>
+              )}
+            </>
+          ) : (
+            <>
+              <NavLink
+                to="/admin"
+                end
+                className={({ isActive }) => `desktop-nav-item ${isActive ? 'active' : ''}`}
+              >
+                <span>🛡️</span>
+                <span>Admin Panel</span>
+              </NavLink>
 
-          {isAdminOrStaff && (
-            <NavLink
-              to="/admin"
-              className={({ isActive }) => `desktop-nav-item ${isActive ? 'active' : ''}`}
-            >
-              <span>🛡️</span>
-              <span>Admin Panel</span>
-            </NavLink>
+              <NavLink
+                to="/admin/issues"
+                className={({ isActive }) => `desktop-nav-item ${isActive ? 'active' : ''}`}
+              >
+                <span>📋</span>
+                <span>Triage & Dispatch</span>
+              </NavLink>
+
+              <NavLink
+                to="/admin/users"
+                className={({ isActive }) => `desktop-nav-item ${isActive ? 'active' : ''}`}
+              >
+                <span>👥</span>
+                <span>User Roles</span>
+              </NavLink>
+            </>
           )}
         </nav>
 
@@ -103,11 +124,11 @@ function HeaderNavigation() {
           {user ? (
             <>
               {isAdminOrStaff && (
-                <span className="admin-nav-indicator" style={{ textTransform: 'uppercase' }}>
+                <span className="admin-nav-indicator">
                   {role}
                 </span>
               )}
-              <NavLink to="/profile" style={{ textDecoration: 'none', color: '#cbd5e1', fontWeight: '600', fontSize: '13px' }}>
+              <NavLink to="/profile" style={{ textDecoration: 'none', color: 'var(--color-slate-300)', fontWeight: '600' }}>
                 👤 {user.name || user.email}
               </NavLink>
               <button onClick={handleLogout} className="logout-btn">
@@ -115,7 +136,7 @@ function HeaderNavigation() {
               </button>
             </>
           ) : (
-            <NavLink to="/login" className="btn-primary" style={{ padding: '8px 18px', fontSize: '13px' }}>
+            <NavLink to="/login" className="btn-primary" style={{ padding: '0.4rem 1rem', fontSize: '0.8rem' }}>
               Sign In
             </NavLink>
           )}
@@ -124,25 +145,46 @@ function HeaderNavigation() {
 
       {/* Bottom Navigation for Mobile */}
       <nav className="mobile-navbar">
-        <NavLink to="/" className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}>
-          <span style={{ fontSize: '18px' }}>🏠</span>
-          <span>Home</span>
-        </NavLink>
+        {!isAdminOrStaff ? (
+          <>
+            <NavLink to="/" className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}>
+              <span style={{ fontSize: '1.2rem' }}>🏠</span>
+              <span>Home</span>
+            </NavLink>
 
-        <NavLink to="/issues" className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}>
-          <span style={{ fontSize: '18px' }}>🌐</span>
-          <span>Explorer</span>
-        </NavLink>
+            <NavLink to="/issues" className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}>
+              <span style={{ fontSize: '1.2rem' }}>🌐</span>
+              <span>Explorer</span>
+            </NavLink>
 
-        <NavLink to="/report" className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}>
-          <span style={{ fontSize: '18px' }}>📢</span>
-          <span>Report</span>
-        </NavLink>
+            <NavLink to="/report" className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}>
+              <span style={{ fontSize: '1.2rem' }}>📢</span>
+              <span>Report</span>
+            </NavLink>
 
-        <NavLink to={isAdminOrStaff ? '/admin' : '/dashboard'} className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}>
-          <span style={{ fontSize: '18px' }}>📊</span>
-          <span>{isAdminOrStaff ? 'Admin' : 'Portal'}</span>
-        </NavLink>
+            <NavLink to="/dashboard" className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}>
+              <span style={{ fontSize: '1.2rem' }}>📊</span>
+              <span>Portal</span>
+            </NavLink>
+          </>
+        ) : (
+          <>
+            <NavLink to="/admin" end className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}>
+              <span style={{ fontSize: '1.2rem' }}>🛡️</span>
+              <span>Admin</span>
+            </NavLink>
+
+            <NavLink to="/admin/issues" className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}>
+              <span style={{ fontSize: '1.2rem' }}>📋</span>
+              <span>Triage</span>
+            </NavLink>
+
+            <NavLink to="/admin/users" className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}>
+              <span style={{ fontSize: '1.2rem' }}>👥</span>
+              <span>Users</span>
+            </NavLink>
+          </>
+        )}
       </nav>
     </>
   );
@@ -152,7 +194,7 @@ function MainLayout() {
   return (
     <div className="app-container">
       <HeaderNavigation />
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <main className="main-content">
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />

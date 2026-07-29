@@ -4,6 +4,7 @@ const User = require('../models/User');
 const logger = require('../config/logger');
 const { deleteFile } = require('../middleware/upload');
 const aiPipeline = require('../services/aiPipeline');
+const AiCategorizationService = require('../services/AiCategorizationService');
 
 // @desc    Create new report
 // @route   POST /api/reports
@@ -19,14 +20,47 @@ const createReport = async (req, res, next) => {
       });
     }
 
-    const { title, description, category, priority, longitude, latitude, address } = req.body;
+    const { title, description, category: inputCategory, priority: inputPriority, longitude, latitude, address, audioTranscript } = req.body;
+
+    // AI Categorization step via DistilBERT NLP classifier
+    const nlpResult = AiCategorizationService.classifyIssue({ title, description, audioTranscript });
+    const finalCategory = inputCategory || nlpResult.predictedCategory;
+    const finalPriority = inputPriority || nlpResult.priority;
+
+    // Multi-Modal Trust Score Calculation Engine
+    const hasPhoto = req.processedFiles && req.processedFiles.length > 0;
+    const hasVoice = Boolean(audioTranscript || (description && description.includes('[🎤 Voice Note Attached]')));
+
+    const trustResult = AiCategorizationService.calculateTrustScore({
+      hasExifData: hasPhoto, // EXIF metadata presence flag
+      exifTimestamp: hasPhoto ? new Date() : null,
+      submissionTimestamp: new Date(),
+      deviceLat: parseFloat(latitude) || 0,
+      deviceLng: parseFloat(longitude) || 0,
+      exifLat: hasPhoto ? parseFloat(latitude) : null,
+      exifLng: hasPhoto ? parseFloat(longitude) : null,
+      isAuthenticated: Boolean(req.user),
+      userSubmissionCount: req.user?.submissionCount || 0,
+      userResolutionRatio: req.user?.resolutionRatio || 0.8,
+      hasVoiceNote: hasVoice,
+      title: title || '',
+      description: description || ''
+    });
 
     // Create report data
     const reportData = {
       title,
       description,
-      category,
-      priority: priority || 'Medium',
+      category: finalCategory,
+      priority: finalPriority,
+      tier1: nlpResult.tier1,
+      tier2: nlpResult.tier2,
+      tier3: nlpResult.tier3,
+      priorityScore: nlpResult.priorityScore,
+      trustScore: trustResult.trustScoreDecimal,
+      trustTier: trustResult.trustTier,
+      trustPillarBreakdown: trustResult.breakdown,
+      status: trustResult.trustTier === 'LOW_TRUST_SPAM' ? 'Flagged for Triage' : 'Reported',
       location: {
         type: 'Point',
         coordinates: [parseFloat(longitude), parseFloat(latitude)],
@@ -68,9 +102,29 @@ const createReport = async (req, res, next) => {
       reportData.priority = aiResult.aiSuggestions.suggestedPriority;
     }
 
-    // If duplicate detected, increment upvotes on master ticket
+    // If duplicate detected, increment upvotes on master ticket and recalculate priority score
     if (aiResult.isDuplicate && aiResult.masterTicketId) {
-      await Report.findByIdAndUpdate(aiResult.masterTicketId, { $inc: { upvotes: 1 } });
+      const masterTicket = await Report.findById(aiResult.masterTicketId);
+      if (masterTicket) {
+        masterTicket.upvotes = (masterTicket.upvotes || 0) + 1;
+        
+        // Recalculate the Priority Score with the new upvote count
+        const updatedScores = aiPipeline.calculatePriorityScore({
+          title: masterTicket.title,
+          description: masterTicket.description,
+          category: masterTicket.category,
+          upvotes: masterTicket.upvotes,
+          latitude: masterTicket.location?.coordinates ? masterTicket.location.coordinates[1] : 0,
+          longitude: masterTicket.location?.coordinates ? masterTicket.location.coordinates[0] : 0,
+        });
+        
+        masterTicket.priorityScore = updatedScores.priorityScore;
+        if (updatedScores.suggestedPriority) {
+          masterTicket.priority = updatedScores.suggestedPriority;
+        }
+        
+        await masterTicket.save();
+      }
     }
 
     const report = await Report.create(reportData);

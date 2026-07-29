@@ -1,88 +1,46 @@
-# Codex Instruction: Expand Web App Pages, Modernize UI ("Flashy" Layout), & Standardize Issue Categories
+# Codex Instruction: Enterprise UI Refactor & Production-Grade Layout Implementation for CivicKural
 
 ## Objective
 
-Enhance `frontend/SamvadApp` to:
-1. Transform the UI into a visually engaging, modern, and "flashy" web application using modern styling techniques (e.g., glassmorphism, subtle animations, vibrant badges, interactive cards).
-2. Expand the routing structure to include a comprehensive suite of distinct pages for regular users and administrators, making it feel like a complete, feature-rich platform.
-3. Strictly implement a standardized set of Issue Categories across the reporting forms, filters, and admin dashboards.
+Refactor the entire frontend UI across `frontend/CivicKuralApp/` to transform it from an AI-prototype style into a high-density, production-ready, enterprise-grade municipal software interface (inspired by Stripe Dashboard, Tailwind UI Enterprise, and USWDS).
+
+The new interface must look like a paid B2B municipal SaaS product—emphasizing data density, high contrast, clean typography, and operational efficiency without generic AI tropes (no sparkles, no glowing gradients, no floating card fluff).
 
 ---
 
 ## STRICT SCOPE RULE
 
-Modify ONLY:
-- `frontend/SamvadApp`
+Modify / Refactor ONLY:
+- `frontend/CivicKuralApp/src/components/`
+- `frontend/CivicKuralApp/src/pages/`
+- `frontend/CivicKuralApp/src/index.css` (or Tailwind theme configuration)
 
 Do NOT modify:
-- `backend/`
-- `shared/`
-- `root package.json`
-- `documentation/`
+- REST API integration routes, state management stores, or backend payload contracts.
 
 ---
 
-## Task 1: UI/UX Modernization ("Flashy" Setup)
+## Design System & Styling Rules
 
-### Visual Design Guidelines
-- **Modern Cards & Containers:** Upgrade simple plain DIVs to styled cards with subtle drop shadows, rounded corners (`border-radius`), and hover elevation effects.
-- **Interactive Feedback:** Add smooth CSS transitions for button clicks, card hover states, and navigation links. 
-- **Data Visualization & Stats:** On dashboards, display key metrics using prominent "Stat Cards" (e.g., Total Issues, Pending Resolution, Resolved, Urgent Attention) with icons and colored progress bars or mini charts.
-- **Status Badges:** Use vibrant, color-coded pills/badges to represent issue statuses (e.g., *Pending* in yellow/orange, *In Progress* in blue, *Resolved* in green, *Rejected* in red).
-- **Empty States & Loaders:** Add visually appealing empty states (when no issues exist) and skeleton loading states or spinners for async data fetching.
+### 1. Color Palette & Typography
+- **Background Surface:** `#F8FAFC` (`slate-50`) or solid `#FFFFFF`.
+- **Primary Text:** High-contrast `#0F172A` (`slate-900`).
+- **Secondary Text:** Crisp `#64748B` (`slate-500`).
+- **Borders & Dividers:** Precise `#E2E8F0` (`slate-200`).
+- **Brand Accent:** Authoritative Deep Navy `#1E3A8A` (`blue-900`).
+- **Status Badges (Semantic Only):**
+  - High / Verified: `#15803D` text on `#DCFCE7` bg (`emerald`).
+  - Standard / Pending: `#B45309` text on `#FEF3C7` bg (`amber`).
+  - Low / Spam / Flagged: `#B91C1C` text on `#FEE2E2` bg (`red`).
+- **Font Stack:** Clean, neutral sans-serif (`Inter`, `Public Sans`, or system `-apple-system`).
 
----
+### 2. Mandatory Component Refactoring
 
-## Task 2: Comprehensive Page & Route Expansion
-
-Expand `react-router-dom` routes in `src/routes/` or `App.tsx` to include a full suite of pages. If placeholder components do not exist, create them in `src/pages/` with mock data or existing API hooks:
-
-### 1. Public / Citizen Routes
-- **`/` (Landing / Home Page):** A hero section explaining the Samvad platform, quick statistical highlights, and prominent call-to-action (CTA) buttons: *"Report an Issue"* and *"Explore Public Reports"*.
-- **`/dashboard` (User Portal):** A personalized dashboard showing the user's submitted issues, current tracking statuses, and recent activity timelines.
-- **`/report` (Issue Submission Page):** A clean, multi-step or well-organized form featuring category selection, geolocation tagging, image upload with live preview, and detailed description fields.
-- **`/issues` (Community Issue Explorer):** A public feed/grid of reported issues featuring:
-  - Search bar by keyword.
-  - Filter dropdowns by **Category** and **Status**.
-  - Sorting by *Newest*, *Most Upvoted*, or *Priority*.
-- **`/issues/:id` (Detailed Issue View):** A dedicated page for a single issue showing the full description, uploaded images, location map/coordinates, resolution timeline, and community/admin comments.
-- **`/profile` (User Profile):** User details, notification preferences, and history of platform engagement.
-
-### 2. Admin & Management Routes
-- **`/admin` (Admin Overview Dashboard):** A high-level control panel featuring system-wide analytics, category breakdown charts, and urgent issue alerts.
-- **`/admin/issues` (Admin Issue Management Table):** A dense, data-rich table view allowing administrators to:
-  - Filter and bulk-select issues.
-  - Change issue status (e.g., *Assign*, *Mark In Progress*, *Resolve*).
-  - Assign priority levels (*Low*, *Medium*, *High*, *Critical*).
-- **`/admin/users` (User & Role Management):** A simple interface to view registered users, moderators, and departmental officers.
-
----
-
-## Task 3: Mandated Issue Categories Implementation
-
-Strictly standardize the application's issue categorization. Wherever categories are referenced (reporting forms, database mapping, UI filters, admin charts), use the following **exact 5 categories**:
-
-1. **Sanitary & Public Hygiene**
-2. **Service Delivery Deficiencies**
-3. **Administrative Delays and Maladministration**
-4. **Abuse of Power or Corruption**
-5. **Systemic and Policy Issues**
-
-### Implementation Requirements for Categories:
-- **Report Form (`/report`):** Populate the category selection dropdown or radio buttons strictly with these 5 options. Do not allow free-text category submission.
-- **Visual Mapping:** Assign distinct color codes or icons to each category so they stand out visually across the app:
-  - *Sanitary & Public Hygiene:* Teal / Green badge
-  - *Service Delivery Deficiencies:* Blue badge
-  - *Administrative Delays and Maladministration:* Orange / Amber badge
-  - *Abuse of Power or Corruption:* Red / Crimson badge
-  - *Systemic and Policy Issues:* Purple / Indigo badge
-- **Filtering & Analytics:** Ensure the `/issues` filter dropdown and `/admin` analytics charts group and display data accurately according to these specific 5 categories.
-
----
-
-## Verification & Testing
-
-Inside `frontend/SamvadApp`, run:
-```bash
-npm install
-npm run dev
+#### A. Banner & Status Badges
+- **REMOVE:** All sparkles (`✨`), robot icons (`🤖`), purple/pink gradients (`bg-gradient-to-r`), and text labels like "Auto-detected by AI".
+- **REPLACE WITH:** Clean, functional system badges:
+  ```tsx
+  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200">
+    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+    System Categorized
+  </span>

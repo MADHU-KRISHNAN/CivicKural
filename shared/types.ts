@@ -68,11 +68,20 @@ export interface Issue {
   comments?: IssueComment[];
   priorityScore?: number;
   trustScore?: number;
+  trustTier?: 'HIGH_INTEGRITY' | 'STANDARD' | 'LOW_TRUST_SPAM';
+  trustPillarBreakdown?: {
+    exifScore: number;
+    geoScore: number;
+    reputationScore: number;
+    consistencyScore: number;
+  };
   tier1?: string;
   tier2?: string;
   tier3?: string;
   isDuplicate?: boolean;
   masterTicketId?: string;
+  intentGuardrailTriggered?: boolean;
+  primaryIntent?: string;
   aiSuggestions?: {
     suggestedCategory?: string;
     suggestedPriority?: PriorityLevel;
@@ -80,6 +89,8 @@ export interface Issue {
     urgencyScore?: number;
     sentimentScore?: number;
     summary?: string;
+    intentGuardrailTriggered?: boolean;
+    primaryIntent?: string;
     processedAt?: string;
   };
   createdAt: string;
@@ -90,7 +101,8 @@ export interface Issue {
 export interface CreateIssueRequest {
   title: string;
   description: string;
-  category: IssueCategory;
+  category?: IssueCategory;
+  audioTranscript?: string;
   priority?: PriorityLevel;
   latitude: number;
   longitude: number;
