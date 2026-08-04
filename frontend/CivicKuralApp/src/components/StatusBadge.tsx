@@ -31,6 +31,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
     const statusConfig: Record<IssueStatus, string> = {
       Reported: 'badge-neutral',
       'In Progress': 'badge-warning',
+      'Pending Verification': 'badge-info',
       Resolved: 'badge-success',
       Rejected: 'badge-danger',
     };

@@ -5,6 +5,7 @@ const logger = require('../config/logger');
 const { deleteFile } = require('../middleware/upload');
 const aiPipeline = require('../services/aiPipeline');
 const AiCategorizationService = require('../services/AiCategorizationService');
+const ReportService = require('../services/ReportService');
 
 // @desc    Create new report
 // @route   POST /api/reports
@@ -27,117 +28,39 @@ const createReport = async (req, res, next) => {
     const finalCategory = inputCategory || nlpResult.predictedCategory;
     const finalPriority = inputPriority || nlpResult.priority;
 
-    // Multi-Modal Trust Score Calculation Engine
-    const hasPhoto = req.processedFiles && req.processedFiles.length > 0;
-    const hasVoice = Boolean(audioTranscript || (description && description.includes('[🎤 Voice Note Attached]')));
-
-    const trustResult = AiCategorizationService.calculateTrustScore({
-      hasExifData: hasPhoto, // EXIF metadata presence flag
-      exifTimestamp: hasPhoto ? new Date() : null,
-      submissionTimestamp: new Date(),
-      deviceLat: parseFloat(latitude) || 0,
-      deviceLng: parseFloat(longitude) || 0,
-      exifLat: hasPhoto ? parseFloat(latitude) : null,
-      exifLng: hasPhoto ? parseFloat(longitude) : null,
-      isAuthenticated: Boolean(req.user),
-      userSubmissionCount: req.user?.submissionCount || 0,
-      userResolutionRatio: req.user?.resolutionRatio || 0.8,
-      hasVoiceNote: hasVoice,
-      title: title || '',
-      description: description || ''
-    });
-
-    // Create report data
+    // Delegate to the new ReportService which handles Trust Score and AI Pipeline + Clustering
     const reportData = {
       title,
       description,
       category: finalCategory,
       priority: finalPriority,
+      audioTranscript,
+      location: {
+        type: 'Point',
+        coordinates: [parseFloat(longitude) || 0, parseFloat(latitude) || 0],
+        address
+      },
+      photos: req.processedFiles || [],
+      // Initial defaults from NLP
       tier1: nlpResult.tier1,
       tier2: nlpResult.tier2,
       tier3: nlpResult.tier3,
       priorityScore: nlpResult.priorityScore,
-      trustScore: trustResult.trustScoreDecimal,
-      trustTier: trustResult.trustTier,
-      trustPillarBreakdown: trustResult.breakdown,
-      status: trustResult.trustTier === 'LOW_TRUST_SPAM' ? 'Flagged for Triage' : 'Reported',
-      location: {
-        type: 'Point',
-        coordinates: [parseFloat(longitude), parseFloat(latitude)],
-        address
-      },
-      citizenId: req.user.id
+      // Mock flags for testing if passed by frontend
+      mockAiGenerated: req.body.mockAiGenerated === 'true' || req.body.mockAiGenerated === true,
+      mockStockPhoto: req.body.mockStockPhoto === 'true' || req.body.mockStockPhoto === true,
+      mockImageToTextMatch: req.body.mockImageToTextMatch === 'true' || req.body.mockImageToTextMatch === true
     };
 
-    // Add photo information if files were uploaded
-    if (req.processedFiles && req.processedFiles.length > 0) {
-      reportData.photos = req.processedFiles;
-    }
+    const serviceResult = await ReportService.processReportSubmission(reportData, req.user);
 
-    // Process through simulated AI Pipeline
-    let nearbyReports = [];
-    try {
-      if (longitude && latitude) {
-        nearbyReports = await Report.findNearby(parseFloat(longitude), parseFloat(latitude), 200).select('+vectorEmbedding');
-      }
-    } catch (e) {
-      nearbyReports = await Report.find().limit(20).select('+vectorEmbedding');
-    }
-
-    const aiResult = aiPipeline.processReport(
-      { title, description, category, photos: reportData.photos || [], location: reportData.location },
-      nearbyReports
-    );
-
-    reportData.tier1 = aiResult.tier1;
-    reportData.tier2 = aiResult.tier2;
-    reportData.tier3 = aiResult.tier3;
-    reportData.priorityScore = aiResult.priorityScore;
-    reportData.trustScore = aiResult.trustScore;
-    reportData.vectorEmbedding = aiResult.vectorEmbedding;
-    reportData.isDuplicate = aiResult.isDuplicate;
-    reportData.masterTicketId = aiResult.masterTicketId;
-    reportData.aiSuggestions = aiResult.aiSuggestions;
-    if (aiResult.aiSuggestions?.suggestedPriority) {
-      reportData.priority = aiResult.aiSuggestions.suggestedPriority;
-    }
-
-    // If duplicate detected, increment upvotes on master ticket and recalculate priority score
-    if (aiResult.isDuplicate && aiResult.masterTicketId) {
-      const masterTicket = await Report.findById(aiResult.masterTicketId);
-      if (masterTicket) {
-        masterTicket.upvotes = (masterTicket.upvotes || 0) + 1;
-        
-        // Recalculate the Priority Score with the new upvote count
-        const updatedScores = aiPipeline.calculatePriorityScore({
-          title: masterTicket.title,
-          description: masterTicket.description,
-          category: masterTicket.category,
-          upvotes: masterTicket.upvotes,
-          latitude: masterTicket.location?.coordinates ? masterTicket.location.coordinates[1] : 0,
-          longitude: masterTicket.location?.coordinates ? masterTicket.location.coordinates[0] : 0,
-        });
-        
-        masterTicket.priorityScore = updatedScores.priorityScore;
-        if (updatedScores.suggestedPriority) {
-          masterTicket.priority = updatedScores.suggestedPriority;
-        }
-        
-        await masterTicket.save();
-      }
-    }
-
-    const report = await Report.create(reportData);
-
-    // Populate citizen information
-    await report.populate('citizenId', 'name email');
-
-    logger.info(`New report created: ${report.reportId} by ${req.user.email}`);
+    logger.info(`Report submission processed for ${req.user.email}. Merged: ${serviceResult.isMerged}`);
 
     res.status(201).json({
       success: true,
-      message: 'Report submitted successfully',
-      report
+      message: serviceResult.message,
+      report: serviceResult.report,
+      isMerged: serviceResult.isMerged
     });
 
   } catch (error) {
@@ -208,24 +131,23 @@ const getReports = async (req, res, next) => {
       };
     }
 
-    // User-specific filters
+    // Strict RBAC Data Segregation
     if (req.user) {
       if (req.user.role === 'citizen') {
-        // Citizens can only see their own reports and public reports
-        if (req.query.mine === 'true') {
-          filter.citizenId = req.user.id;
-        } else {
-          filter.isPublic = true;
-        }
+        // Citizens ONLY see their own reports.
+        filter.citizenId = req.user.id;
       } else if (req.user.role === 'staff') {
-        // Staff can see all reports, optionally filter by assignment
-        if (req.query.assigned === 'true') {
-          filter.assignedStaffId = req.user.id;
-        }
+        // Staff ONLY see reports assigned to them or their department queue
+        filter.$or = [
+          { assignedStaffId: req.user.id },
+          { tier2: req.user.department, assignedStaffId: null }
+        ];
+      } else if (req.user.role === 'admin') {
+        // Admin sees all (filter remains empty unless specified by other queries)
       }
     } else {
-      // Public access - only public reports
-      filter.isPublic = true;
+      // Public access
+      return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
     // Sort options
@@ -376,6 +298,58 @@ const updateReport = async (req, res, next) => {
   }
 };
 
+// @desc    Update report status (Admin Override)
+// @route   PUT /api/reports/:id/status
+// @access  Private (Admin only)
+const updateReportStatus = async (req, res, next) => {
+  try {
+    const reportId = req.params.id;
+    const { status, notes, department, priority } = req.body;
+
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Forbidden: Admin access required for status override' });
+    }
+
+    let report = await Report.findById(reportId);
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'Report not found' });
+    }
+
+    if (status) report.status = status;
+    if (notes) {
+      report.adminNotes = notes;
+      report.resolutionDetails = notes;
+    }
+    if (department) {
+      report.tier2 = department;
+    }
+    if (priority) report.priority = priority;
+    
+    if (status === 'Resolved' && !report.resolvedAt) {
+      report.resolvedAt = new Date();
+      report.actualResolutionDate = new Date();
+    }
+
+    await report.save();
+    
+    // Repopulate for frontend
+    const updatedReport = await Report.findById(reportId)
+      .populate('citizenId', 'name email')
+      .populate('assignedStaffId', 'name staffId department');
+
+    logger.info(`Report status overridden by Admin: ${report.reportId}`);
+
+    res.json({
+      success: true,
+      message: 'Report status updated successfully',
+      report: updatedReport
+    });
+  } catch (error) {
+    logger.error(`Update report status error: ${error.message}`);
+    next(error);
+  }
+};
+
 // @desc    Delete report
 // @route   DELETE /api/reports/:id
 // @access  Private (Citizens - own reports only, Staff - any report)
@@ -491,11 +465,141 @@ const submitFeedback = async (req, res, next) => {
   }
 };
 
+// @desc    Submit proof of resolution
+// @route   POST /api/reports/:id/submit-proof
+// @access  Private (Staff - assigned only)
+const submitResolutionProof = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { notes } = req.body;
+    const report = await Report.findById(req.params.id);
+
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'Report not found' });
+    }
+
+    // Only staff assigned to the report can submit proof
+    if (req.user.role !== 'staff' && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only staff can submit resolution proof' });
+    }
+    
+    if (report.assignedStaffId && report.assignedStaffId.toString() !== req.user.id) {
+       return res.status(403).json({ success: false, message: 'Not authorized to submit proof for this report' });
+    }
+
+    if (report.status !== 'In Progress' && report.status !== 'Assigned') {
+      return res.status(400).json({ success: false, message: 'Can only submit proof for active reports' });
+    }
+
+    let photoUrl = '';
+    if (req.processedFiles && req.processedFiles.length > 0) {
+      photoUrl = req.processedFiles[0].url;
+    }
+
+    report.status = 'Pending Verification';
+    report.resolutionProof = {
+      photoUrl,
+      notes,
+      submittedAt: new Date(),
+      submittedBy: req.user.id
+    };
+
+    await report.save();
+    logger.info(`Resolution proof submitted for report: ${report.reportId}`);
+
+    res.json({
+      success: true,
+      message: 'Resolution proof submitted successfully. Pending verification.',
+      report
+    });
+  } catch (error) {
+    if (req.processedFiles) {
+      req.processedFiles.forEach(file => deleteFile(file.filename));
+    }
+    logger.error(`Submit proof error: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Verify report resolution
+// @route   POST /api/reports/:id/verify-resolution
+// @access  Private (Admin or Citizen who reported)
+const verifyResolution = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { status, comments } = req.body;
+    const report = await Report.findById(req.params.id);
+
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'Report not found' });
+    }
+
+    // Only Admin or original Citizen can verify
+    const isAdmin = req.user.role === 'admin';
+    const isOwner = report.citizenId.toString() === req.user.id;
+
+    if (!isAdmin && !isOwner) {
+      return res.status(403).json({ success: false, message: 'Not authorized to verify this report' });
+    }
+
+    if (report.status !== 'Pending Verification') {
+      return res.status(400).json({ success: false, message: 'Report is not pending verification' });
+    }
+
+    report.verificationDetails = {
+      verifiedAt: new Date(),
+      verifiedBy: req.user.id,
+      status, // 'Verified' or 'Rejected'
+      comments
+    };
+
+    if (status === 'Verified') {
+      report.status = 'Resolved';
+      report.resolvedAt = new Date();
+      report.actualResolutionDate = new Date();
+      report.resolutionDetails = report.resolutionProof?.notes || 'Resolved and verified';
+    } else {
+      report.status = 'In Progress'; // Send back to staff
+    }
+
+    await report.save();
+    logger.info(`Resolution verified (${status}) for report: ${report.reportId}`);
+
+    res.json({
+      success: true,
+      message: `Report resolution ${status.toLowerCase()} successfully`,
+      report
+    });
+  } catch (error) {
+    logger.error(`Verify resolution error: ${error.message}`);
+    next(error);
+  }
+};
+
 module.exports = {
   createReport,
   getReports,
   getReport,
   updateReport,
   deleteReport,
-  submitFeedback
+  submitFeedback,
+  submitResolutionProof,
+  verifyResolution,
+  updateReportStatus
 };

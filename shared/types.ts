@@ -80,6 +80,9 @@ export interface Issue {
   tier3?: string;
   isDuplicate?: boolean;
   masterTicketId?: string;
+  multiCitizenConfirmations?: number;
+  secondaryReporters?: string[];
+  isSuspiciousImage?: boolean;
   intentGuardrailTriggered?: boolean;
   primaryIntent?: string;
   aiSuggestions?: {

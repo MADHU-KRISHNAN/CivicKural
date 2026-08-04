@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'http://127.0.0.1:5000/api';
 
 async function runSimulation() {
   try {
@@ -32,7 +32,7 @@ async function runSimulation() {
       const fd = new FormData();
       fd.append('title', title);
       fd.append('description', description);
-      fd.append('category', 'Infrastructure & Utilities');
+      fd.append('category', 'Service Delivery Deficiencies');
       fd.append('longitude', lng);
       fd.append('latitude', lat);
       fd.append('address', addr);

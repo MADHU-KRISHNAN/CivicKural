@@ -6,7 +6,10 @@ const {
   getReport,
   updateReport,
   deleteReport,
-  submitFeedback
+  submitFeedback,
+  submitResolutionProof,
+  verifyResolution,
+  updateReportStatus
 } = require('../controllers/reportController');
 const { protect, optionalAuth } = require('../middleware/auth');
 const { upload, processImages } = require('../middleware/upload');
@@ -67,6 +70,25 @@ const feedbackValidation = [
     .trim()
     .isLength({ max: 500 })
     .withMessage('Comment cannot exceed 500 characters')
+];
+
+const submitProofValidation = [
+  body('notes')
+    .optional()
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage('Notes cannot exceed 1000 characters')
+];
+
+const verifyResolutionValidation = [
+  body('status')
+    .isIn(['Verified', 'Rejected'])
+    .withMessage('Status must be Verified or Rejected'),
+  body('comments')
+    .optional()
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage('Comments cannot exceed 1000 characters')
 ];
 
 // Add new citizen and admin routes
@@ -166,5 +188,9 @@ router.route('/:id')
   .delete(protect, deleteReport);
 
 router.post('/:id/feedback', protect, feedbackValidation, submitFeedback);
+
+router.post('/:id/submit-proof', protect, upload, processImages, submitProofValidation, submitResolutionProof);
+router.post('/:id/verify-resolution', protect, verifyResolutionValidation, verifyResolution);
+router.put('/:id/status', protect, updateReportStatus);
 
 module.exports = router;

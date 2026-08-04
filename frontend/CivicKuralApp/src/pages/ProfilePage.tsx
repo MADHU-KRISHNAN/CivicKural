@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import apiService, { User } from '../services/api';
+import apiService, { User, Issue } from '../services/api';
 
 export const ProfilePage: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [issues, setIssues] = useState<Issue[]>([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [emailAlerts, setEmailAlerts] = useState(true);
   const navigate = useNavigate();
@@ -15,8 +16,41 @@ export const ProfilePage: React.FC = () => {
         return;
       }
       setUser(u);
+      apiService.getIssues().then(res => {
+        if (res.success && res.data) {
+          setIssues(res.data);
+        }
+      });
     });
   }, [navigate]);
+
+  let metricLabel = "Past Reports";
+  let metricCount = issues.length;
+  let metricDesc = "Grievances submitted by you";
+  let sectionTitle = "Platform Engagement & Citizen Level";
+  let trustLabel = "Trust Rating";
+  let trustDesc = "Verified platform contributor";
+  let trustScoreText = "98% Genuine Score";
+
+  const role = user?.role || user?.userType || 'citizen';
+  
+  if (role === 'staff') {
+     metricLabel = "Past Reports Cleared";
+     metricCount = issues.filter(i => i.status === 'Resolved' || i.status === 'Pending Verification').length;
+     metricDesc = "Grievances cleared in your ward queue";
+     sectionTitle = "Field Operations History";
+     trustLabel = "Service Rating";
+     trustDesc = "SLA compliance metric";
+     trustScoreText = "94% On-Time Resolution";
+  } else if (role === 'admin' || role === 'moderator') {
+     metricLabel = "Previously Verified Complaints";
+     metricCount = issues.filter(i => i.status === 'Resolved').length;
+     metricDesc = "Complaints successfully verified and closed";
+     sectionTitle = "Command Center Analytics";
+     trustLabel = "System Health";
+     trustDesc = "Overall platform reliability";
+     trustScoreText = "99.9% Uptime";
+  }
 
   const handleLogout = async () => {
     await apiService.logout();
@@ -49,18 +83,19 @@ export const ProfilePage: React.FC = () => {
       {/* Platform Badges & Trust Level */}
       <div className="glass-card" style={{ marginBottom: '25px' }}>
         <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', marginBottom: '15px' }}>
-          Platform Engagement & Citizen Level
+          {sectionTitle}
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
           <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-            <span style={{ fontSize: '24px' }}>🏅</span>
-            <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', marginTop: '6px' }}>Active Reporter</h4>
-            <p style={{ fontSize: '12px', color: '#64748b' }}>Verified platform contributor</p>
+            <span style={{ fontSize: '32px', fontWeight: '900', color: '#0284c7' }}>{metricCount}</span>
+            <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', marginTop: '6px' }}>{metricLabel}</h4>
+            <p style={{ fontSize: '12px', color: '#64748b' }}>{metricDesc}</p>
           </div>
           <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
             <span style={{ fontSize: '24px' }}>🛡️</span>
-            <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', marginTop: '6px' }}>Trust Rating</h4>
-            <p style={{ fontSize: '12px', color: '#16a34a', fontWeight: '700' }}>98% Genuine Score</p>
+            <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', marginTop: '6px' }}>{trustLabel}</h4>
+            <p style={{ fontSize: '12px', color: '#16a34a', fontWeight: '700' }}>{trustScoreText}</p>
+            <p style={{ fontSize: '12px', color: '#64748b' }}>{trustDesc}</p>
           </div>
         </div>
       </div>

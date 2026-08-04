@@ -1,21 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import apiService, { UserRole } from '../services/api';
 
 export const LoginScreen: React.FC = () => {
+  const [portalRole, setPortalRole] = useState<UserRole>('citizen');
   const [mode, setMode] = useState<'login' | 'register'>('login');
+  
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('citizen@example.com');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('password123');
-  const [role, setRole] = useState<UserRole>('citizen');
   const [department, setDepartment] = useState('Sanitation Oversight');
+  
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   const navigate = useNavigate();
   const location = useLocation();
-
   const redirectPath = (location.state as any)?.from;
+
+  // Set default emails based on portal
+  useEffect(() => {
+    if (mode === 'login') {
+      if (portalRole === 'citizen') setEmail('citizen@example.com');
+      else if (portalRole === 'staff') setEmail('rajesh.mod@civickural.gov.in');
+      else if (portalRole === 'admin') setEmail('admin@civickural.gov.in');
+    } else {
+      setEmail('');
+    }
+  }, [portalRole, mode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,10 +52,10 @@ export const LoginScreen: React.FC = () => {
 
     try {
       if (mode === 'login') {
-        const res = await apiService.login(email.trim(), role, password);
+        const res = await apiService.login(email.trim(), portalRole, password);
         if (res.success && res.data) {
           const userRole = res.data.user.role || res.data.user.userType || 'citizen';
-          const target = redirectPath || (userRole === 'admin' || userRole === 'staff' ? '/admin' : '/dashboard');
+          const target = redirectPath || (userRole === 'admin' ? '/admin' : userRole === 'staff' ? '/staff' : '/dashboard');
           navigate(target, { replace: true });
         } else {
           setErrorMessage(res.error || 'Authentication failed. Please check your credentials.');
@@ -53,14 +65,14 @@ export const LoginScreen: React.FC = () => {
           name: name.trim(),
           email: email.trim(),
           password,
-          role,
-          userType: role,
-          department: role === 'staff' || role === 'admin' ? department : undefined,
+          role: portalRole,
+          userType: portalRole,
+          department: portalRole === 'staff' || portalRole === 'admin' ? department : undefined,
         });
 
         if (res.success && res.data) {
           const userRole = res.data.user.role || res.data.user.userType || 'citizen';
-          const target = redirectPath || (userRole === 'admin' || userRole === 'staff' ? '/admin' : '/dashboard');
+          const target = redirectPath || (userRole === 'admin' ? '/admin' : userRole === 'staff' ? '/staff' : '/dashboard');
           navigate(target, { replace: true });
         } else {
           setErrorMessage(res.error || 'Registration failed. Email may already be in use.');
@@ -73,22 +85,54 @@ export const LoginScreen: React.FC = () => {
     }
   };
 
-  const handleDemoLogin = async (demoRole: UserRole) => {
+  const handleDemoLogin = async () => {
     setLoading(true);
     setErrorMessage('');
-    const demoEmail = demoRole === 'admin' ? 'admin@civickural.gov.in' : demoRole === 'staff' ? 'rajesh.mod@civickural.gov.in' : 'citizen@example.com';
+    const demoEmail = portalRole === 'admin' ? 'admin@civickural.gov.in' : portalRole === 'staff' ? 'rajesh.mod@civickural.gov.in' : 'citizen@example.com';
     try {
-      const res = await apiService.login(demoEmail, demoRole, 'CivicKural#2026!');
+      const res = await apiService.login(demoEmail, portalRole, 'password123'); // Assume password123 for demo
       if (res.success && res.data) {
-        const target = redirectPath || (demoRole === 'admin' || demoRole === 'staff' ? '/admin' : '/dashboard');
+        const userRole = res.data.user.role || res.data.user.userType || 'citizen';
+        const target = redirectPath || (userRole === 'admin' ? '/admin' : userRole === 'staff' ? '/staff' : '/dashboard');
         navigate(target, { replace: true });
+      } else {
+        setErrorMessage(res.error || 'Demo login failed.');
       }
-    } catch {
-      setErrorMessage('Demo login failed.');
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Demo login failed.');
     } finally {
       setLoading(false);
     }
   };
+
+  const getPortalConfig = () => {
+    switch (portalRole) {
+      case 'admin':
+        return {
+          title: 'Administrator Portal',
+          accentColor: '#8b5cf6',
+          icon: '🛡️',
+          desc: 'System Configuration & Analytics'
+        };
+      case 'staff':
+        return {
+          title: 'Staff Portal',
+          accentColor: '#f59e0b',
+          icon: '👷',
+          desc: 'Ward Queue & Issue Resolution'
+        };
+      case 'citizen':
+      default:
+        return {
+          title: 'Citizen Portal',
+          accentColor: '#0284c7',
+          icon: '👤',
+          desc: 'Report & Track Issues'
+        };
+    }
+  };
+
+  const config = getPortalConfig();
 
   return (
     <div style={styles.container}>
@@ -96,39 +140,71 @@ export const LoginScreen: React.FC = () => {
         <div style={styles.header}>
           <div style={{ fontSize: '42px', marginBottom: '8px' }}>🏛️</div>
           <h1 style={styles.title}>CivicKural</h1>
-          <p style={styles.subtitle}>AI-Powered Civic Governance &amp; Grievance Platform</p>
+          <p style={styles.subtitle}>AI-Powered Civic Governance Platform</p>
         </div>
 
-        <div style={styles.card}>
-          {/* Mode Switcher */}
-          <div style={styles.toggleContainer}>
-            <button
-              type="button"
-              style={{
-                ...styles.toggleBtn,
-                ...(mode === 'login' ? styles.toggleBtnActive : {}),
-              }}
-              onClick={() => {
-                setMode('login');
-                setErrorMessage('');
-              }}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              style={{
-                ...styles.toggleBtn,
-                ...(mode === 'register' ? styles.toggleBtnActive : {}),
-              }}
-              onClick={() => {
-                setMode('register');
-                setErrorMessage('');
-              }}
-            >
-              Create Account
-            </button>
+        {/* Portal Selection Tabs */}
+        <div style={styles.portalTabs}>
+          <button
+            onClick={() => { setPortalRole('citizen'); setMode('login'); setErrorMessage(''); }}
+            style={{ ...styles.portalTab, ...(portalRole === 'citizen' ? { ...styles.portalTabActive, borderColor: '#0284c7', color: '#0284c7' } : {}) }}
+          >
+            👤 Citizen
+          </button>
+          <button
+            onClick={() => { setPortalRole('staff'); setMode('login'); setErrorMessage(''); }}
+            style={{ ...styles.portalTab, ...(portalRole === 'staff' ? { ...styles.portalTabActive, borderColor: '#f59e0b', color: '#f59e0b' } : {}) }}
+          >
+            👷 Staff
+          </button>
+          <button
+            onClick={() => { setPortalRole('admin'); setMode('login'); setErrorMessage(''); }}
+            style={{ ...styles.portalTab, ...(portalRole === 'admin' ? { ...styles.portalTabActive, borderColor: '#8b5cf6', color: '#8b5cf6' } : {}) }}
+          >
+            🛡️ Admin
+          </button>
+        </div>
+
+        <div style={{ ...styles.card, borderTop: `4px solid ${config.accentColor}` }}>
+          
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+             <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#fff', marginBottom: '4px' }}>
+               {config.icon} {config.title}
+             </h2>
+             <p style={{ fontSize: '13px', color: '#94a3b8' }}>{config.desc}</p>
           </div>
+
+          {/* Mode Switcher - Only for Citizen */}
+          {portalRole === 'citizen' && (
+            <div style={styles.toggleContainer}>
+              <button
+                type="button"
+                style={{
+                  ...styles.toggleBtn,
+                  ...(mode === 'login' ? { ...styles.toggleBtnActive, backgroundColor: config.accentColor } : {}),
+                }}
+                onClick={() => {
+                  setMode('login');
+                  setErrorMessage('');
+                }}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                style={{
+                  ...styles.toggleBtn,
+                  ...(mode === 'register' ? { ...styles.toggleBtnActive, backgroundColor: config.accentColor } : {}),
+                }}
+                onClick={() => {
+                  setMode('register');
+                  setErrorMessage('');
+                }}
+              >
+                Create Account
+              </button>
+            </div>
+          )}
 
           {errorMessage && (
             <div style={styles.errorAlert}>
@@ -181,17 +257,16 @@ export const LoginScreen: React.FC = () => {
               />
             </div>
 
-            {/* Role and Department selectors removed for security. New users default to citizen. Roles are determined by the backend upon login. */}
-
             <button
               type="submit"
               style={{
                 ...styles.submitBtn,
+                backgroundColor: config.accentColor,
                 ...(loading ? styles.buttonDisabled : {}),
               }}
               disabled={loading}
             >
-              {loading ? 'Authenticating...' : mode === 'login' ? `Sign In as ${role.toUpperCase()}` : 'Register Account'}
+              {loading ? 'Authenticating...' : mode === 'login' ? `Sign In to ${config.title}` : 'Register Account'}
             </button>
           </form>
 
@@ -201,19 +276,11 @@ export const LoginScreen: React.FC = () => {
             <div style={styles.demoBtnGroup}>
               <button
                 type="button"
-                style={styles.demoBtn}
-                onClick={() => handleDemoLogin('citizen')}
+                style={{ ...styles.demoBtn, borderColor: config.accentColor, color: config.accentColor }}
+                onClick={handleDemoLogin}
                 disabled={loading}
               >
-                Login as Citizen
-              </button>
-              <button
-                type="button"
-                style={{ ...styles.demoBtn, backgroundColor: '#0f172a' }}
-                onClick={() => handleDemoLogin('admin')}
-                disabled={loading}
-              >
-                Login as Admin
+                One-Click {config.title} Login
               </button>
             </div>
           </div>
@@ -257,12 +324,31 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '15px',
     color: '#94a3b8',
   },
+  portalTabs: {
+    display: 'flex',
+    gap: '8px',
+    marginBottom: '16px',
+  },
+  portalTab: {
+    flex: 1,
+    padding: '12px 0',
+    backgroundColor: '#1e293b',
+    border: '2px solid transparent',
+    borderRadius: '12px',
+    color: '#94a3b8',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  portalTabActive: {
+    backgroundColor: '#0f172a',
+  },
   card: {
     backgroundColor: '#1e293b',
     borderRadius: '16px',
     padding: '32px 28px',
     boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)',
-    border: '1px solid #334155',
   },
   toggleContainer: {
     display: 'flex',
@@ -284,7 +370,6 @@ const styles: Record<string, React.CSSProperties> = {
     transition: 'all 0.2s ease',
   },
   toggleBtnActive: {
-    backgroundColor: '#0284c7',
     color: '#ffffff',
   },
   errorAlert: {
@@ -321,33 +406,7 @@ const styles: Record<string, React.CSSProperties> = {
     boxSizing: 'border-box',
     width: '100%',
   },
-  roleGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '8px',
-  },
-  roleBtn: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '4px',
-    padding: '10px 6px',
-    borderRadius: '8px',
-    border: '1px solid #334155',
-    backgroundColor: '#0f172a',
-    color: '#94a3b8',
-    fontSize: '12px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-  },
-  roleBtnActive: {
-    borderColor: '#0284c7',
-    backgroundColor: '#0369a1',
-    color: '#ffffff',
-  },
   submitBtn: {
-    backgroundColor: '#0284c7',
     padding: '14px 0',
     borderRadius: '8px',
     border: 'none',
@@ -380,14 +439,14 @@ const styles: Record<string, React.CSSProperties> = {
   },
   demoBtn: {
     flex: 1,
-    padding: '10px',
+    padding: '12px',
     borderRadius: '8px',
-    border: '1px solid #334155',
-    backgroundColor: '#334155',
-    color: '#ffffff',
-    fontSize: '13px',
-    fontWeight: '600',
+    border: '1px solid',
+    backgroundColor: 'transparent',
+    fontSize: '14px',
+    fontWeight: 'bold',
     cursor: 'pointer',
+    transition: 'all 0.2s',
   },
 };
 

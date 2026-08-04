@@ -66,10 +66,10 @@ export const CommunityIssuesPage: React.FC = () => {
       {/* Header Title */}
       <div className="section-header">
         <h1 className="section-title">
-          Community Grievance Explorer
+          My Grievances
         </h1>
         <p className="section-subtitle">
-          Browse, track, and support civic issues reported across the municipality
+          Track and manage your submitted civic issues
         </p>
       </div>
 
@@ -138,7 +138,7 @@ export const CommunityIssuesPage: React.FC = () => {
       ) : filteredIssues.length === 0 ? (
         <div className="glass-card text-center mt-4">
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>No grievances found</h2>
-          <p style={{ color: 'var(--color-slate-500)' }}>Try adjusting your filters or search keywords.</p>
+          <p style={{ color: 'var(--color-slate-500)' }}>You haven't reported any issues matching these filters.</p>
         </div>
       ) : (
         <div className="grid-cards">
@@ -169,15 +169,6 @@ export const CommunityIssuesPage: React.FC = () => {
               )}
 
               <div className="issue-card-footer">
-                <button
-                  type="button"
-                  onClick={(e) => handleUpvote(e, item.id)}
-                  className="btn-outline"
-                >
-                  <span>Upvote</span>
-                  <span>({item.upvotes})</span>
-                </button>
-
                 <StatusBadge priority={item.priority} type="priority" />
               </div>
             </div>

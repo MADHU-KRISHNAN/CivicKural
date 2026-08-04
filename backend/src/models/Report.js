@@ -52,7 +52,7 @@ const reportSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Submitted', 'Assigned', 'In Progress', 'Resolved', 'Closed', 'Rejected'],
+    enum: ['Submitted', 'Assigned', 'In Progress', 'Pending Verification', 'Resolved', 'Closed', 'Rejected'],
     default: 'Submitted'
   },
   location: {
@@ -149,6 +149,34 @@ const reportSchema = new mongoose.Schema({
     trim: true,
     maxlength: [1000, 'Resolution details cannot exceed 1000 characters']
   },
+  // Structured resolution proof
+  resolutionProof: {
+    photoUrl: String,
+    notes: {
+      type: String,
+      maxlength: 1000
+    },
+    submittedAt: Date,
+    submittedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }
+  },
+  verificationDetails: {
+    verifiedAt: Date,
+    verifiedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    status: {
+      type: String,
+      enum: ['Pending', 'Verified', 'Rejected']
+    },
+    comments: {
+      type: String,
+      maxlength: 1000
+    }
+  },
   // Tracking
   estimatedResolutionDate: Date,
   actualResolutionDate: Date,
@@ -168,6 +196,20 @@ const reportSchema = new mongoose.Schema({
   isPublic: {
     type: Boolean,
     default: true
+  },
+
+  // Multi-citizen verification & AI Vision features
+  multiCitizenConfirmations: {
+    type: Number,
+    default: 0
+  },
+  secondaryReporters: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  isSuspiciousImage: {
+    type: Boolean,
+    default: false
   },
 
   // Simulated AI Pipeline Fields

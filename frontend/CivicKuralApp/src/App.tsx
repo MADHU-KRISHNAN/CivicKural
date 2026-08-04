@@ -10,6 +10,7 @@ import ProfilePage from './pages/ProfilePage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminIssuesPage from './pages/admin/AdminIssuesPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
+import StaffTasksPage from './pages/StaffTasksPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 import apiService, { User } from './services/api';
@@ -41,20 +42,21 @@ function HeaderNavigation() {
   }
 
   const role = user?.role || user?.userType || 'citizen';
-  const isAdminOrStaff = role === 'admin' || role === 'staff' || role === 'moderator';
+  const isAdmin = role === 'admin' || role === 'moderator';
+  const isStaff = role === 'staff';
 
   return (
     <>
       {/* Top Header Navbar for Desktop/Laptop */}
       <header className="desktop-navbar">
-        <NavLink to={isAdminOrStaff ? '/admin' : '/'} className="brand-logo">
+        <NavLink to={(isAdmin || isStaff) ? '/admin' : '/'} className="brand-logo">
           <span style={{ fontSize: '1.5rem' }}>🏛️</span>
           <span className="brand-title">CivicKural</span>
           <span className="brand-badge">AI Platform</span>
         </NavLink>
 
         <nav className="desktop-nav-links">
-          {!isAdminOrStaff ? (
+          {(!isAdmin && !isStaff) ? (
             <>
               <NavLink
                 to="/"
@@ -69,7 +71,7 @@ function HeaderNavigation() {
                 className={({ isActive }) => `desktop-nav-item ${isActive ? 'active' : ''}`}
               >
                 <span>🌐</span>
-                <span>Explorer</span>
+                <span>My Grievances</span>
               </NavLink>
 
               <NavLink
@@ -90,7 +92,7 @@ function HeaderNavigation() {
                 </NavLink>
               )}
             </>
-          ) : (
+          ) : isAdmin ? (
             <>
               <NavLink
                 to="/admin"
@@ -117,13 +119,23 @@ function HeaderNavigation() {
                 <span>User Roles</span>
               </NavLink>
             </>
+          ) : (
+            <>
+              <NavLink
+                to="/staff"
+                className={({ isActive }) => `desktop-nav-item ${isActive ? 'active' : ''}`}
+              >
+                <span>📋</span>
+                <span>Staff Portal</span>
+              </NavLink>
+            </>
           )}
         </nav>
 
         <div className="user-profile-summary">
           {user ? (
             <>
-              {isAdminOrStaff && (
+              {(isAdmin || isStaff) && (
                 <span className="admin-nav-indicator">
                   {role}
                 </span>
@@ -145,7 +157,7 @@ function HeaderNavigation() {
 
       {/* Bottom Navigation for Mobile */}
       <nav className="mobile-navbar">
-        {!isAdminOrStaff ? (
+        {(!isAdmin && !isStaff) ? (
           <>
             <NavLink to="/" className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}>
               <span style={{ fontSize: '1.2rem' }}>🏠</span>
@@ -167,7 +179,7 @@ function HeaderNavigation() {
               <span>Portal</span>
             </NavLink>
           </>
-        ) : (
+        ) : isAdmin ? (
           <>
             <NavLink to="/admin" end className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}>
               <span style={{ fontSize: '1.2rem' }}>🛡️</span>
@@ -182,6 +194,13 @@ function HeaderNavigation() {
             <NavLink to="/admin/users" className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}>
               <span style={{ fontSize: '1.2rem' }}>👥</span>
               <span>Users</span>
+            </NavLink>
+          </>
+        ) : (
+          <>
+            <NavLink to="/staff" className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}>
+              <span style={{ fontSize: '1.2rem' }}>📋</span>
+              <span>Tasks</span>
             </NavLink>
           </>
         )}
@@ -239,7 +258,7 @@ function MainLayout() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'staff', 'moderator']}>
+              <ProtectedRoute allowedRoles={['admin', 'moderator']}>
                 <AdminDashboardPage />
               </ProtectedRoute>
             }
@@ -247,7 +266,7 @@ function MainLayout() {
           <Route
             path="/admin/issues"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'staff', 'moderator']}>
+              <ProtectedRoute allowedRoles={['admin', 'moderator']}>
                 <AdminIssuesPage />
               </ProtectedRoute>
             }
@@ -255,8 +274,16 @@ function MainLayout() {
           <Route
             path="/admin/users"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'staff', 'moderator']}>
+              <ProtectedRoute allowedRoles={['admin', 'moderator']}>
                 <AdminUsersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/staff"
+            element={
+              <ProtectedRoute allowedRoles={['staff']}>
+                <StaffTasksPage />
               </ProtectedRoute>
             }
           />

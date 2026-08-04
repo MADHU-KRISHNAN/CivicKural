@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import apiService, { Issue, IssueStatus, PriorityLevel } from '../../services/api';
 import CategoryBadge from '../../components/CategoryBadge';
 import StatusBadge from '../../components/StatusBadge';
@@ -19,6 +21,12 @@ export const AdminIssuesPage: React.FC = () => {
   const [editProofPhoto, setEditProofPhoto] = useState<string | null>(null);
   const [saveLoading, setSaveLoading] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Export state
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportDateRange, setExportDateRange] = useState('All');
+  const [exportDepartment, setExportDepartment] = useState('All');
+  const [exportStatus, setExportStatus] = useState('All');
 
   useEffect(() => {
     loadIssues();
@@ -107,6 +115,72 @@ export const AdminIssuesPage: React.FC = () => {
     return matchesSearch && matchesCat && matchesStatus;
   });
 
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    
+    // Filter issues for export
+    const now = new Date().getTime();
+    const exportIssues = issues.filter(issue => {
+      let matchesDate = true;
+      if (exportDateRange === '7days') {
+        matchesDate = (now - new Date(issue.createdAt).getTime()) <= 7 * 24 * 60 * 60 * 1000;
+      } else if (exportDateRange === '30days') {
+        matchesDate = (now - new Date(issue.createdAt).getTime()) <= 30 * 24 * 60 * 60 * 1000;
+      }
+      
+      const dept = issue.assignedDepartment || issue.tier2 || 'Unassigned';
+      const matchesDept = exportDepartment === 'All' || dept.includes(exportDepartment);
+      const matchesStatus = exportStatus === 'All' || issue.status === exportStatus;
+      
+      return matchesDate && matchesDept && matchesStatus;
+    });
+
+    const total = exportIssues.length;
+    const resolved = exportIssues.filter(i => i.status === 'Resolved').length;
+    const pending = total - resolved;
+
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(2, 132, 199);
+    doc.text('CivicKural Admin Transparency Report', 14, 22);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
+    
+    // Summary Metrics
+    doc.setFontSize(14);
+    doc.setTextColor(40, 40, 40);
+    doc.text('Summary Analytics', 14, 45);
+    
+    doc.setFontSize(12);
+    doc.text(`Total Issues: ${total}`, 14, 53);
+    doc.text(`Resolved: ${resolved}`, 60, 53);
+    doc.text(`Pending: ${pending}`, 106, 53);
+
+    // Table Data
+    const tableColumn = ["ID", "Reported At", "Category", "Department", "Status", "Trust"];
+    const tableRows = exportIssues.map(issue => [
+      issue.reportId || issue.id.substring(0, 6),
+      new Date(issue.createdAt).toLocaleDateString(),
+      issue.category,
+      issue.assignedDepartment || issue.tier2 || 'Unassigned',
+      issue.status,
+      `${((issue.trustScore || 0.95) * 100).toFixed(0)}%`
+    ]);
+
+    autoTable(doc, {
+      startY: 65,
+      head: [tableColumn],
+      body: tableRows,
+      theme: 'grid',
+      headStyles: { fillColor: [2, 132, 199] }
+    });
+
+    doc.save(`civickural_report_${new Date().toISOString().split('T')[0]}.pdf`);
+    setShowExportModal(false);
+  };
+
   return (
     <div style={{ backgroundColor: '#0b1329', minHeight: '100vh', padding: '30px 24px', width: '100%', boxSizing: 'border-box', color: '#ffffff' }}>
       <div style={{ marginBottom: '25px' }}>
@@ -119,9 +193,18 @@ export const AdminIssuesPage: React.FC = () => {
         <h1 style={{ fontSize: '30px', fontWeight: '900', color: '#ffffff' }}>
           Administrative Issue Triage & supervisory Override Table 🛠️
         </h1>
-        <p style={{ color: '#94a3b8', fontSize: '15px' }}>
-          Real-time priority score sorting, 3-tier taxonomy, trust score verification, and resolution proof management
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <p style={{ color: '#94a3b8', fontSize: '15px', margin: 0 }}>
+            Real-time priority score sorting, 3-tier taxonomy, trust score verification, and resolution proof management
+          </p>
+          <button 
+            onClick={() => setShowExportModal(true)}
+            className="btn-primary" 
+            style={{ background: '#10b981', borderColor: '#10b981', display: 'flex', gap: '8px', alignItems: 'center' }}
+          >
+            <span>📄</span> Export PDF Report
+          </button>
+        </div>
       </div>
 
       {/* Filter Toolbar */}
@@ -368,6 +451,81 @@ export const AdminIssuesPage: React.FC = () => {
                 style={{ padding: '12px 24px', fontSize: '14px' }}
               >
                 {saveLoading ? <span className="spinner" /> : 'Save Triage &amp; Dispatch'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Report Modal */}
+      {showExportModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}>
+          <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '16px', maxWidth: '480px', width: '100%', padding: '30px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)', color: '#ffffff' }}>
+            <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#ffffff', marginBottom: '6px' }}>
+              Export Transparency Report 📄
+            </h2>
+            <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '20px' }}>
+              Generate a PDF summary of civic issues for higher authority review.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>Time Range:</label>
+                <select
+                  value={exportDateRange}
+                  onChange={(e) => setExportDateRange(e.target.value)}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: '#0f172a', color: '#ffffff', fontSize: '14px', outline: 'none' }}
+                >
+                  <option value="All">All Time</option>
+                  <option value="7days">Last 7 Days</option>
+                  <option value="30days">Last 30 Days</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>Department Filter:</label>
+                <select
+                  value={exportDepartment}
+                  onChange={(e) => setExportDepartment(e.target.value)}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: '#0f172a', color: '#ffffff', fontSize: '14px', outline: 'none' }}
+                >
+                  <option value="All">All Departments</option>
+                  <option value="Sanitation Board">Sanitation Board</option>
+                  <option value="Public Works Dept">Public Works Dept</option>
+                  <option value="Traffic Control">Traffic Control</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>Status Filter:</label>
+                <select
+                  value={exportStatus}
+                  onChange={(e) => setExportStatus(e.target.value)}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: '#0f172a', color: '#ffffff', fontSize: '14px', outline: 'none' }}
+                >
+                  <option value="All">All Statuses</option>
+                  <option value="Resolved">Resolved Issues Only</option>
+                  <option value="Pending Verification">Pending Verification</option>
+                  <option value="In Progress">Unsolved (In Progress / Reported)</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setShowExportModal(false)}
+                style={{ padding: '12px 20px', borderRadius: '8px', border: '1px solid #334155', background: '#0f172a', color: '#94a3b8', cursor: 'pointer', fontWeight: '600' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleExportPDF}
+                className="btn-primary"
+                style={{ padding: '12px 24px', fontSize: '14px', background: '#10b981', borderColor: '#10b981' }}
+              >
+                Download PDF
               </button>
             </div>
           </div>
