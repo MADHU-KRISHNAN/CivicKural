@@ -16,9 +16,6 @@ class TrustScoreService {
       deviceLng: parseFloat(newReport.longitude) || 0,
       exifLat: newReport.hasPhoto ? parseFloat(newReport.latitude) : null,
       exifLng: newReport.hasPhoto ? parseFloat(newReport.longitude) : null,
-      isAuthenticated: Boolean(reqUser),
-      userSubmissionCount: reqUser?.submissionCount || 0,
-      userResolutionRatio: reqUser?.resolutionRatio || 0.8,
       hasVoiceNote: newReport.hasVoice,
       title: newReport.title || '',
       description: newReport.description || ''
@@ -26,39 +23,48 @@ class TrustScoreService {
 
     let baseScore = trustResult.trustScore; // Out of 100
     
-    let reputationWeight = 0;
-    let aiVisionScore = 0;
-    let penalties = 0;
     let isSuspiciousImage = false;
-
-    // A. Past Report History (Reputation Factor)
-    if (reqUser && (reqUser.id || reqUser._id)) {
-      const citizenId = reqUser.id || reqUser._id;
-      const resolvedReportsCount = await Report.countDocuments({ citizenId: citizenId, status: 'Resolved' });
-      // Fake reports are mapped to 'Rejected' status in our schema
-      const fakeReportCount = await Report.countDocuments({ citizenId: citizenId, status: 'Rejected' });
-
-      if (resolvedReportsCount > 3 && fakeReportCount === 0) {
-        reputationWeight = 10;
-      } else if (fakeReportCount > 0) {
-        penalties = 25; // Deduct -25%
-      }
+    let authenticityFlags = [];
+    let isAiGenerated = newReport.mockAiGenerated || false;
+    let isWebDuplicate = newReport.mockStockPhoto || false;
+    let authenticityScore = 100;
+    
+    // EXIF Checks
+    const hasExifData = Boolean(newReport.hasPhoto);
+    if (hasExifData && newReport.hasPhoto) {
+      // Assuming a simplistic check: if it has photo and not mock missing exif
+      authenticityFlags.push('EXIF_MATCH');
+      baseScore += 15;
+    } else if (newReport.hasPhoto && !hasExifData) {
+      authenticityFlags.push('METADATA_MISSING');
+      baseScore -= 10;
     }
 
-    // B. AI Visual Authenticity & Relevancy Check (Simulated via mock flags for testing)
-    if (newReport.mockAiGenerated || newReport.mockStockPhoto) {
+    // AI / Stock Photo Penalty
+    if (isAiGenerated) {
       isSuspiciousImage = true;
+      authenticityFlags.push('AI_SYNTHETIC_FLAG');
+      baseScore -= 40;
+      authenticityScore -= 80;
+    } else if (isWebDuplicate) {
+      isSuspiciousImage = true;
+      authenticityFlags.push('WEB_DUPLICATE_FLAG');
+      baseScore -= 35;
+      authenticityScore -= 70;
     }
 
     if (newReport.mockImageToTextMatch) {
-      aiVisionScore += 15;
+      baseScore += 15;
     }
 
-    // Calculate Final Initial Trust Score
-    let finalTrustScore = baseScore + reputationWeight + aiVisionScore - penalties;
+    let finalTrustScore = baseScore;
     
-    // Apply Suspicious Image Penalty Cap
-    if (isSuspiciousImage) {
+    // Apply Caps
+    if (isAiGenerated) {
+      finalTrustScore = Math.min(finalTrustScore, 20.0);
+    } else if (isWebDuplicate) {
+      finalTrustScore = Math.min(finalTrustScore, 30.0);
+    } else if (isSuspiciousImage) {
       finalTrustScore = Math.min(finalTrustScore, 30.0);
     }
     
@@ -71,12 +77,21 @@ class TrustScoreService {
     } else if (finalTrustScore < 50.0) {
       trustTier = 'LOW_TRUST_SPAM';
     }
+    
+    const imageAuthenticity = {
+      hasExifData,
+      isAiGenerated,
+      isWebDuplicate,
+      authenticityScore: Math.max(0, authenticityScore),
+      flags: authenticityFlags
+    };
 
     return {
       trustScore: finalTrustScore,
       trustScoreDecimal: parseFloat((finalTrustScore / 100.0).toFixed(2)),
       trustTier,
-      isSuspiciousImage
+      isSuspiciousImage,
+      imageAuthenticity
     };
   }
 }

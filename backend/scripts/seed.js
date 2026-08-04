@@ -8,7 +8,7 @@ const MONGODB_URI = process.env.MONGODB_URI;
 
 const INITIAL_USERS = [
   // Citizens
-  { id: 'user-1', name: 'Aarav Sharma', email: 'aarav@example.com', phone: '+91 9876543210', role: 'citizen' },
+  { id: 'user-1', name: 'Aarav Sharma', email: 'citizen@example.com', phone: '+91 9876543210', role: 'citizen' },
   { id: 'user-3', name: 'Neha Patel', email: 'neha@example.com', phone: '+91 9822233344', role: 'citizen' },
   { id: 'user-5', name: 'Sanjay Verma', email: 'sanjay@example.com', phone: '+91 9833344455', role: 'citizen' },
   { id: 'user-6', name: 'Anita Desai', email: 'anita@example.com', phone: '+91 9844455566', role: 'citizen' },

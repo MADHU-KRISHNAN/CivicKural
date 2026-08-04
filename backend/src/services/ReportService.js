@@ -15,7 +15,10 @@ class ReportService {
       const longitude = reportData.location.coordinates[0];
       const latitude = reportData.location.coordinates[1];
       
+      const seventyTwoHoursAgo = new Date(Date.now() - 72 * 60 * 60 * 1000);
+      
       const nearbyCluster = await Report.findOne({
+        createdAt: { $gte: seventyTwoHoursAgo },
         location: {
           $near: {
             $geometry: { 
@@ -68,6 +71,7 @@ class ReportService {
     reportData.trustScore = trustResult.trustScoreDecimal;
     reportData.trustTier = trustResult.trustTier;
     reportData.isSuspiciousImage = trustResult.isSuspiciousImage;
+    reportData.imageAuthenticity = trustResult.imageAuthenticity;
     if (trustResult.trustTier === 'LOW_TRUST_SPAM') {
         reportData.status = 'Rejected';
     } else {

@@ -308,9 +308,25 @@ export const AdminIssuesPage: React.FC = () => {
                     </td>
 
                     <td style={{ padding: '16px 20px' }}>
-                      <span style={{ padding: '3px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: '700', backgroundColor: '#0f172a', color: '#38bdf8', border: '1px solid #334155' }}>
-                        🛡️ {tScore}% Trust
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
+                        <span style={{ padding: '3px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: '700', backgroundColor: '#0f172a', color: '#38bdf8', border: '1px solid #334155' }}>
+                          🛡️ {tScore}% Trust
+                        </span>
+                        {issue.imageAuthenticity && (
+                          <span style={{ 
+                            padding: '3px 8px', 
+                            borderRadius: '10px', 
+                            fontSize: '10px', 
+                            fontWeight: '700', 
+                            backgroundColor: issue.imageAuthenticity.isAiGenerated || issue.imageAuthenticity.isWebDuplicate ? '#450a0a' : issue.imageAuthenticity.hasExifData ? '#064e3b' : '#422006', 
+                            color: issue.imageAuthenticity.isAiGenerated || issue.imageAuthenticity.isWebDuplicate ? '#fca5a5' : issue.imageAuthenticity.hasExifData ? '#6ee7b7' : '#fcd34d', 
+                            border: '1px solid',
+                            borderColor: issue.imageAuthenticity.isAiGenerated || issue.imageAuthenticity.isWebDuplicate ? '#991b1b' : issue.imageAuthenticity.hasExifData ? '#059669' : '#b45309'
+                          }}>
+                            {issue.imageAuthenticity.isAiGenerated || issue.imageAuthenticity.isWebDuplicate ? '🔴 Suspected Fake / AI Image' : issue.imageAuthenticity.hasExifData ? '🟢 Camera Verified' : '🟡 Metadata Missing'}
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     <td style={{ padding: '16px 20px' }}>
@@ -360,6 +376,43 @@ export const AdminIssuesPage: React.FC = () => {
             {validationError && (
               <div style={{ backgroundColor: '#450a0a', border: '1px solid #991b1b', color: '#fca5a5', padding: '12px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px' }}>
                 ⚠️ {validationError}
+              </div>
+            )}
+
+            {/* Visual Verification Audit Box */}
+            {editingIssue && editingIssue.imageAuthenticity && (
+              <div style={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', padding: '14px', marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#e2e8f0', margin: '0 0 10px 0' }}>📷 Visual Verification Audit</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px' }}>
+                  <div style={{ color: '#94a3b8' }}>Authenticity Score:</div>
+                  <div style={{ fontWeight: '700', color: editingIssue.imageAuthenticity.authenticityScore >= 80 ? '#6ee7b7' : '#fca5a5' }}>
+                    {editingIssue.imageAuthenticity.authenticityScore}%
+                  </div>
+                  <div style={{ color: '#94a3b8' }}>AI Generated:</div>
+                  <div style={{ fontWeight: '700', color: editingIssue.imageAuthenticity.isAiGenerated ? '#fca5a5' : '#e2e8f0' }}>
+                    {editingIssue.imageAuthenticity.isAiGenerated ? 'Yes (Suspected)' : 'No'}
+                  </div>
+                  <div style={{ color: '#94a3b8' }}>Web Duplicate:</div>
+                  <div style={{ fontWeight: '700', color: editingIssue.imageAuthenticity.isWebDuplicate ? '#fca5a5' : '#e2e8f0' }}>
+                    {editingIssue.imageAuthenticity.isWebDuplicate ? 'Yes (Suspected)' : 'No'}
+                  </div>
+                  <div style={{ color: '#94a3b8' }}>Metadata Status:</div>
+                  <div style={{ fontWeight: '700', color: editingIssue.imageAuthenticity.hasExifData ? '#6ee7b7' : '#fcd34d' }}>
+                    {editingIssue.imageAuthenticity.hasExifData ? 'Verified (EXIF)' : 'Missing'}
+                  </div>
+                </div>
+                {editingIssue.imageAuthenticity.flags && editingIssue.imageAuthenticity.flags.length > 0 && (
+                  <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #1e293b' }}>
+                    <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>Active Flags:</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {editingIssue.imageAuthenticity.flags.map(flag => (
+                        <span key={flag} style={{ padding: '2px 6px', background: '#334155', borderRadius: '4px', fontSize: '11px', color: '#e2e8f0', fontWeight: '600' }}>
+                          {flag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

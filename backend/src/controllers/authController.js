@@ -99,7 +99,7 @@ const login = async (req, res, next) => {
           email: 'admin@civickural.gov.in',
           password: password || 'CivicKural#2026!',
           role: 'admin',
-          phone: '+91 9811122233',
+          phone: '+919811122233',
           department: 'Central Grievance Redressal',
         });
       } else if (email === 'rajesh.mod@civickural.gov.in' || email === 'rajesh.mod@samvad.gov.in') {
@@ -108,7 +108,7 @@ const login = async (req, res, next) => {
           email: 'rajesh.mod@civickural.gov.in',
           password: password || 'CivicKural#2026!',
           role: 'staff',
-          phone: '+91 9844455566',
+          phone: '+919844455566',
           department: 'Sanitation Oversight',
         });
       } else if (email === 'citizen@example.com') {
@@ -117,7 +117,7 @@ const login = async (req, res, next) => {
           email: 'citizen@example.com',
           password: password || 'CivicKural#2026!',
           role: 'citizen',
-          phone: '+91 9876543210',
+          phone: '+919876543210',
         });
       } else {
         return res.status(401).json({

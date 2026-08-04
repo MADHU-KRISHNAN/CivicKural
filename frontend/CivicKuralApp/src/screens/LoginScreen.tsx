@@ -110,24 +110,24 @@ export const LoginScreen: React.FC = () => {
       case 'admin':
         return {
           title: 'Administrator Portal',
-          accentColor: '#8b5cf6',
+          accentColor: '#1e3a8a', // Navy/Blue
           icon: '🛡️',
-          desc: 'System Configuration & Analytics'
+          desc: 'City-wide dispatch, user management, SLA analytics, and proof arbitration.'
         };
       case 'staff':
         return {
           title: 'Staff Portal',
-          accentColor: '#f59e0b',
+          accentColor: '#10b981', // Emerald/Green
           icon: '👷',
-          desc: 'Ward Queue & Issue Resolution'
+          desc: 'View assigned ward tickets, upload work proof, and update status.'
         };
       case 'citizen':
       default:
         return {
           title: 'Citizen Portal',
-          accentColor: '#0284c7',
+          accentColor: '#64748b', // Neutral Slate
           icon: '👤',
-          desc: 'Report & Track Issues'
+          desc: 'Report community issues, upload proof, and track resolution progress.'
         };
     }
   };
@@ -147,19 +147,19 @@ export const LoginScreen: React.FC = () => {
         <div style={styles.portalTabs}>
           <button
             onClick={() => { setPortalRole('citizen'); setMode('login'); setErrorMessage(''); }}
-            style={{ ...styles.portalTab, ...(portalRole === 'citizen' ? { ...styles.portalTabActive, borderColor: '#0284c7', color: '#0284c7' } : {}) }}
+            style={{ ...styles.portalTab, ...(portalRole === 'citizen' ? { ...styles.portalTabActive, borderColor: '#64748b', color: '#64748b' } : {}) }}
           >
             👤 Citizen
           </button>
           <button
             onClick={() => { setPortalRole('staff'); setMode('login'); setErrorMessage(''); }}
-            style={{ ...styles.portalTab, ...(portalRole === 'staff' ? { ...styles.portalTabActive, borderColor: '#f59e0b', color: '#f59e0b' } : {}) }}
+            style={{ ...styles.portalTab, ...(portalRole === 'staff' ? { ...styles.portalTabActive, borderColor: '#10b981', color: '#10b981' } : {}) }}
           >
             👷 Staff
           </button>
           <button
             onClick={() => { setPortalRole('admin'); setMode('login'); setErrorMessage(''); }}
-            style={{ ...styles.portalTab, ...(portalRole === 'admin' ? { ...styles.portalTabActive, borderColor: '#8b5cf6', color: '#8b5cf6' } : {}) }}
+            style={{ ...styles.portalTab, ...(portalRole === 'admin' ? { ...styles.portalTabActive, borderColor: '#1e3a8a', color: '#1e3a8a' } : {}) }}
           >
             🛡️ Admin
           </button>

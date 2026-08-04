@@ -7,7 +7,16 @@ export type IssueCategory =
   | 'Abuse of Power or Corruption'
   | 'Systemic and Policy Issues';
 
-export type IssueStatus = 'Reported' | 'In Progress' | 'Resolved' | 'Rejected';
+export type IssueStatus = 'Submitted' | 'Assigned' | 'In Progress' | 'Pending Verification' | 'Resolved' | 'Closed' | 'Rejected' | 'Reported';
+
+export interface ImageAuthenticityDetails {
+  hasExifData: boolean;
+  isAiGenerated: boolean;
+  isWebDuplicate: boolean;
+  authenticityScore: number;
+  flags: string[];
+  cameraModel?: string;
+}
 
 export type PriorityLevel = 'Low' | 'Medium' | 'High' | 'Critical';
 
@@ -83,6 +92,7 @@ export interface Issue {
   multiCitizenConfirmations?: number;
   secondaryReporters?: string[];
   isSuspiciousImage?: boolean;
+  imageAuthenticity?: ImageAuthenticityDetails;
   intentGuardrailTriggered?: boolean;
   primaryIntent?: string;
   aiSuggestions?: {

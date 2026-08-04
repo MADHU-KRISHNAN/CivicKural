@@ -43,68 +43,55 @@ class AiCategorizationService {
   }) {
     let exifScore = 0;
     let geoScore = 0;
-    let reputationScore = 0;
     let consistencyScore = 0;
 
-    // --- Pillar 1: Image & EXIF Metadata Validation (30 Points Max) ---
+    // --- Pillar 1: Image EXIF Metadata Verification (40 Points Max) ---
     if (hasExifData) {
-      exifScore += 15; // Camera metadata present
+      exifScore += 20; // Camera metadata present
     }
 
     if (exifTimestamp) {
       const timeDiffMinutes = Math.abs(new Date(submissionTimestamp) - new Date(exifTimestamp)) / (1000 * 60);
       if (timeDiffMinutes <= 15) {
-        exifScore += 15;
+        exifScore += 20;
       } else if (timeDiffMinutes <= 120) {
-        exifScore += 10;
+        exifScore += 15;
       }
     } else if (hasExifData) {
-      exifScore += 10; // Default fallback when EXIF exists but timestamp missing
+      exifScore += 15; // Default fallback when EXIF exists but timestamp missing
     }
 
-    // --- Pillar 2: Geolocation & Spatial Verification (25 Points Max) ---
+    // --- Pillar 2: Geolocation & Spatial Verification (35 Points Max) ---
     if (exifLat !== null && exifLng !== null && deviceLat !== 0 && deviceLng !== 0) {
       const distance = this.calculateHaversineDistance(deviceLat, deviceLng, exifLat, exifLng);
       if (distance <= 50) {
-        geoScore += 15;
+        geoScore += 20;
       } else if (distance <= 500) {
-        geoScore += 8;
+        geoScore += 10;
       }
     } else if (deviceLat !== 0 && deviceLng !== 0) {
-      geoScore += 10; // Baseline spatial tag present
+      geoScore += 15; // Baseline spatial tag present
     }
 
     // Municipal boundary verification (lat 8-37, lng 68-97)
     if (deviceLat >= 8.0 && deviceLat <= 37.0 && deviceLng >= 68.0 && deviceLng <= 97.0) {
-      geoScore += 10;
+      geoScore += 15;
     }
 
-    // --- Pillar 3: User Account Reputation & History (25 Points Max) ---
-    if (isAuthenticated) {
-      reputationScore += 10;
-    }
-
-    if (userSubmissionCount === 0) {
-      reputationScore += 10; // First-time user baseline
-    } else if (userResolutionRatio >= 0.8) {
-      reputationScore += 15;
-    } else if (userResolutionRatio >= 0.5) {
-      reputationScore += 10;
-    }
-
-    // --- Pillar 4: Multimodal & Content Consistency (20 Points Max) ---
+    // --- Pillar 3: Multimodal & Content Consistency (25 Points Max) ---
     if (hasVoiceNote) {
-      consistencyScore += 10;
+      consistencyScore += 15;
     }
 
     const textLength = (title.trim() + ' ' + description.trim()).length;
     if (textLength > 50) {
       consistencyScore += 10;
-    } else if (textLength >= 15) {
+    } else if (textLength > 20) {
       consistencyScore += 5;
     }
 
-    const totalTrustScore = Math.min(100.0, Math.max(0.0, exifScore + geoScore + reputationScore + consistencyScore));
+    // --- Final Calculation ---
+    const totalTrustScore = Math.min(100.0, Math.max(0.0, exifScore + geoScore + consistencyScore));
     const trustScoreDecimal = parseFloat((totalTrustScore / 100.0).toFixed(2));
 
     let trustTier = 'STANDARD';

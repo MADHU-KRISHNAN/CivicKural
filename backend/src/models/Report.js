@@ -211,6 +211,14 @@ const reportSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  imageAuthenticity: {
+    hasExifData: { type: Boolean, default: false },
+    isAiGenerated: { type: Boolean, default: false },
+    isWebDuplicate: { type: Boolean, default: false },
+    authenticityScore: { type: Number, default: 100 },
+    flags: [{ type: String }],
+    cameraModel: String
+  },
 
   // Simulated AI Pipeline Fields
   upvotes: {

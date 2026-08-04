@@ -133,7 +133,7 @@ export const CommunityIssuesPage: React.FC = () => {
       {loading ? (
         <div className="text-center mt-4">
           <span className="spinner spinner-dark" />
-          <p className="mt-4" style={{ color: 'var(--color-slate-500)' }}>Loading public grievances...</p>
+          <p className="mt-4" style={{ color: 'var(--color-slate-500)' }}>Loading your grievances...</p>
         </div>
       ) : filteredIssues.length === 0 ? (
         <div className="glass-card text-center mt-4">
