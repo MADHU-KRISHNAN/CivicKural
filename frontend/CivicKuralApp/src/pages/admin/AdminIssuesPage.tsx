@@ -1,0 +1,591 @@
+import React, { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import apiService, { Issue, IssueStatus, PriorityLevel } from '../../services/api';
+import CategoryBadge from '../../components/CategoryBadge';
+import StatusBadge from '../../components/StatusBadge';
+
+export const AdminIssuesPage: React.FC = () => {
+  const [issues, setIssues] = useState<Issue[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [selectedStatus, setSelectedStatus] = useState<string>('All');
+
+  // Editing state for supervisory override modal
+  const [editingIssue, setEditingIssue] = useState<Issue | null>(null);
+  const [editStatus, setEditStatus] = useState<IssueStatus>('Reported');
+  const [editPriority, setEditPriority] = useState<PriorityLevel>('Medium');
+  const [editDepartment, setEditDepartment] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [editProofPhoto, setEditProofPhoto] = useState<string | null>(null);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Export state
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportDateRange, setExportDateRange] = useState('All');
+  const [exportDepartment, setExportDepartment] = useState('All');
+  const [exportStatus, setExportStatus] = useState('All');
+
+  useEffect(() => {
+    loadIssues();
+  }, []);
+
+  const loadIssues = async () => {
+    setLoading(true);
+    const res = await apiService.getIssues();
+    if (res.success && res.data) {
+      // Sort automatically by priorityScore descending
+      const sorted = [...res.data].sort((a, b) => {
+        const scoreA = a.priorityScore || (a.priority === 'Critical' ? 85 : a.priority === 'High' ? 65 : 40);
+        const scoreB = b.priorityScore || (b.priority === 'Critical' ? 85 : b.priority === 'High' ? 65 : 40);
+        return scoreB - scoreA;
+      });
+      setIssues(sorted);
+    }
+    setLoading(false);
+  };
+
+  const openEditModal = (issue: Issue) => {
+    setEditingIssue(issue);
+    setEditStatus(issue.status);
+    setEditPriority(issue.priority);
+    setEditDepartment(issue.assignedDepartment || issue.tier2 || '');
+    setEditNotes(issue.adminNotes || '');
+    setEditProofPhoto(issue.photoUrl || null);
+    setValidationError(null);
+  };
+
+  const handleProofPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditProofPhoto(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveIssue = async () => {
+    if (!editingIssue) return;
+    setValidationError(null);
+
+    // Mandate resolution proof details and photo before marking as Resolved
+    if (editStatus === 'Resolved') {
+      if (!editNotes.trim()) {
+        setValidationError('Official resolution details/remarks are mandated before resolving a ticket.');
+        return;
+      }
+      if (!editProofPhoto) {
+        setValidationError('Resolution completion proof media/photo is mandated before marking as Resolved.');
+        return;
+      }
+    }
+
+    setSaveLoading(true);
+
+    const res = await apiService.updateIssueStatus(
+      editingIssue.id,
+      editStatus,
+      editNotes,
+      editDepartment,
+      editPriority
+    );
+
+    if (res.success && res.data) {
+      setIssues((prev) =>
+        prev.map((i) => (i.id === editingIssue.id ? { ...res.data!, adminNotes: editNotes, assignedDepartment: editDepartment } : i))
+      );
+      setEditingIssue(null);
+    } else {
+      setValidationError('Failed to update issue. Please try again.');
+    }
+    setSaveLoading(false);
+  };
+
+  // Filtered Issues
+  const filteredIssues = issues.filter((issue) => {
+    const matchesSearch = (issue.title + ' ' + issue.description + ' ' + (issue.citizenName || '') + ' ' + (issue.tier2 || ''))
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const matchesCat = selectedCategory === 'All' || issue.category === selectedCategory;
+    const matchesStatus = selectedStatus === 'All' || issue.status === selectedStatus;
+    return matchesSearch && matchesCat && matchesStatus;
+  });
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    
+    // Filter issues for export
+    const now = new Date().getTime();
+    const exportIssues = issues.filter(issue => {
+      let matchesDate = true;
+      if (exportDateRange === '7days') {
+        matchesDate = (now - new Date(issue.createdAt).getTime()) <= 7 * 24 * 60 * 60 * 1000;
+      } else if (exportDateRange === '30days') {
+        matchesDate = (now - new Date(issue.createdAt).getTime()) <= 30 * 24 * 60 * 60 * 1000;
+      }
+      
+      const dept = issue.assignedDepartment || issue.tier2 || 'Unassigned';
+      const matchesDept = exportDepartment === 'All' || dept.includes(exportDepartment);
+      const matchesStatus = exportStatus === 'All' || issue.status === exportStatus;
+      
+      return matchesDate && matchesDept && matchesStatus;
+    });
+
+    const total = exportIssues.length;
+    const resolved = exportIssues.filter(i => i.status === 'Resolved').length;
+    const pending = total - resolved;
+
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(2, 132, 199);
+    doc.text('CivicKural Admin Transparency Report', 14, 22);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
+    
+    // Summary Metrics
+    doc.setFontSize(14);
+    doc.setTextColor(40, 40, 40);
+    doc.text('Summary Analytics', 14, 45);
+    
+    doc.setFontSize(12);
+    doc.text(`Total Issues: ${total}`, 14, 53);
+    doc.text(`Resolved: ${resolved}`, 60, 53);
+    doc.text(`Pending: ${pending}`, 106, 53);
+
+    // Table Data
+    const tableColumn = ["ID", "Reported At", "Category", "Department", "Status", "Trust"];
+    const tableRows = exportIssues.map(issue => [
+      issue.reportId || issue.id.substring(0, 6),
+      new Date(issue.createdAt).toLocaleDateString(),
+      issue.category,
+      issue.assignedDepartment || issue.tier2 || 'Unassigned',
+      issue.status,
+      `${((issue.trustScore || 0.95) * 100).toFixed(0)}%`
+    ]);
+
+    autoTable(doc, {
+      startY: 65,
+      head: [tableColumn],
+      body: tableRows,
+      theme: 'grid',
+      headStyles: { fillColor: [2, 132, 199] }
+    });
+
+    doc.save(`civickural_report_${new Date().toISOString().split('T')[0]}.pdf`);
+    setShowExportModal(false);
+  };
+
+  return (
+    <div style={{ backgroundColor: '#0b1329', minHeight: '100vh', padding: '30px 24px', width: '100%', boxSizing: 'border-box', color: '#ffffff' }}>
+      <div style={{ marginBottom: '25px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+          <span style={{ backgroundColor: '#0284c7', color: '#ffffff', fontSize: '11px', fontWeight: '900', padding: '4px 10px', borderRadius: '12px', letterSpacing: '1px' }}>
+            TRIAGE & DISPATCH CONSOLE
+          </span>
+          <span style={{ fontSize: '13px', color: '#94a3b8' }}>Dynamic Priority Score Ordering</span>
+        </div>
+        <h1 style={{ fontSize: '30px', fontWeight: '900', color: '#ffffff' }}>
+          Administrative Issue Triage & supervisory Override Table 🛠️
+        </h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <p style={{ color: '#94a3b8', fontSize: '15px', margin: 0 }}>
+            Real-time priority score sorting, 3-tier taxonomy, trust score verification, and resolution proof management
+          </p>
+          <button 
+            onClick={() => setShowExportModal(true)}
+            className="btn-primary" 
+            style={{ background: '#10b981', borderColor: '#10b981', display: 'flex', gap: '8px', alignItems: 'center' }}
+          >
+            <span>📄</span> Export PDF Report
+          </button>
+        </div>
+      </div>
+
+      {/* Filter Toolbar */}
+      <div style={{ backgroundColor: '#1e293b', borderRadius: '14px', border: '1px solid #334155', padding: '18px', marginBottom: '25px' }}>
+        <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ flex: '1 1 300px', display: 'flex', alignItems: 'center', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', padding: '0 14px' }}>
+            <span style={{ marginRight: '10px', color: '#94a3b8' }}>🔍</span>
+            <input
+              type="text"
+              placeholder="Search title, department, 3-tier taxonomy, or citizen..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', padding: '12px 0', fontSize: '14px', color: '#ffffff' }}
+            />
+          </div>
+
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            style={{ padding: '12px 14px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: '#0f172a', color: '#ffffff', fontSize: '14px', outline: 'none', fontWeight: '600' }}
+          >
+            <option value="All">All 5 Civic Categories</option>
+            <option value="Sanitary & Public Hygiene">Sanitary & Public Hygiene</option>
+            <option value="Service Delivery Deficiencies">Service Delivery Deficiencies</option>
+            <option value="Administrative Delays and Maladministration">Administrative Delays and Maladministration</option>
+            <option value="Abuse of Power or Corruption">Abuse of Power or Corruption</option>
+            <option value="Systemic and Policy Issues">Systemic and Policy Issues</option>
+          </select>
+
+          <select
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            style={{ padding: '12px 14px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: '#0f172a', color: '#ffffff', fontSize: '14px', outline: 'none', fontWeight: '600' }}
+          >
+            <option value="All">All Statuses</option>
+            <option value="Reported">Reported</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Resolved">Resolved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Admin Table */}
+      {loading ? (
+        <div style={{ padding: '50px', textAlign: 'center' }}>
+          <span className="spinner" style={{ borderColor: 'rgba(56, 189, 248, 0.2)', borderTopColor: '#38bdf8' }} />
+        </div>
+      ) : (
+        <div style={{ backgroundColor: '#1e293b', borderRadius: '16px', border: '1px solid #334155', overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#0f172a', borderBottom: '1px solid #334155', color: '#94a3b8', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                <th style={{ padding: '16px 20px' }}>Priority Score</th>
+                <th style={{ padding: '16px 20px' }}>Grievance &amp; 3-Tier Taxonomy</th>
+                <th style={{ padding: '16px 20px' }}>Category</th>
+                <th style={{ padding: '16px 20px' }}>Trust Score</th>
+                <th style={{ padding: '16px 20px' }}>Status</th>
+                <th style={{ padding: '16px 20px' }}>Assigned Dept</th>
+                <th style={{ padding: '16px 20px' }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredIssues.map((issue) => {
+                const pScore = issue.priorityScore || (issue.priority === 'Critical' ? 85 : issue.priority === 'High' ? 65 : 40);
+                const tScore = ((issue.trustScore || 0.95) * 100).toFixed(0);
+
+                return (
+                  <tr key={issue.id} style={{ borderBottom: '1px solid #334155', transition: 'background-color 0.2s ease' }}>
+                    <td style={{ padding: '16px 20px' }}>
+                      <div
+                        style={{
+                          display: 'inline-block',
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          fontWeight: '900',
+                          fontSize: '13px',
+                          backgroundColor: pScore >= 70 ? '#450a0a' : pScore >= 40 ? '#451a03' : '#0c4a6e',
+                          color: pScore >= 70 ? '#f87171' : pScore >= 40 ? '#fbbf24' : '#38bdf8',
+                          border: `1px solid ${pScore >= 70 ? '#991b1b' : pScore >= 40 ? '#78350f' : '#075985'}`,
+                        }}
+                      >
+                        {pScore} / 100
+                      </div>
+                      {issue.isDuplicate && (
+                        <span style={{ display: 'block', fontSize: '10px', color: '#f59e0b', fontWeight: '700', marginTop: '4px' }}>
+                          🔗 Duplicate (Linked)
+                        </span>
+                      )}
+                    </td>
+
+                    <td style={{ padding: '16px 20px', maxWidth: '300px' }}>
+                      <div style={{ fontWeight: '700', color: '#ffffff', marginBottom: '4px', lineHeight: '1.4' }}>{issue.title}</div>
+                      <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                        {issue.tier1 ? `${issue.tier1} → ${issue.tier2}` : `Submitted by ${issue.citizenName || 'Citizen'}`}
+                      </div>
+                    </td>
+
+                    <td style={{ padding: '16px 20px' }}>
+                      <CategoryBadge category={issue.category} size="small" />
+                    </td>
+
+                    <td style={{ padding: '16px 20px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
+                        <span style={{ padding: '3px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: '700', backgroundColor: '#0f172a', color: '#38bdf8', border: '1px solid #334155' }}>
+                          🛡️ {tScore}% Trust
+                        </span>
+                        {issue.imageAuthenticity && (
+                          <span style={{ 
+                            padding: '3px 8px', 
+                            borderRadius: '10px', 
+                            fontSize: '10px', 
+                            fontWeight: '700', 
+                            backgroundColor: issue.imageAuthenticity.isAiGenerated || issue.imageAuthenticity.isWebDuplicate ? '#450a0a' : issue.imageAuthenticity.hasExifData ? '#064e3b' : '#422006', 
+                            color: issue.imageAuthenticity.isAiGenerated || issue.imageAuthenticity.isWebDuplicate ? '#fca5a5' : issue.imageAuthenticity.hasExifData ? '#6ee7b7' : '#fcd34d', 
+                            border: '1px solid',
+                            borderColor: issue.imageAuthenticity.isAiGenerated || issue.imageAuthenticity.isWebDuplicate ? '#991b1b' : issue.imageAuthenticity.hasExifData ? '#059669' : '#b45309'
+                          }}>
+                            {issue.imageAuthenticity.isAiGenerated || issue.imageAuthenticity.isWebDuplicate ? '🔴 Suspected Fake / AI Image' : issue.imageAuthenticity.hasExifData ? '🟢 Camera Verified' : '🟡 Metadata Missing'}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    <td style={{ padding: '16px 20px' }}>
+                      <StatusBadge status={issue.status} />
+                    </td>
+
+                    <td style={{ padding: '16px 20px', fontSize: '13px', fontWeight: '600', color: '#38bdf8' }}>
+                      {issue.assignedDepartment || issue.tier2 || 'Unassigned'}
+                    </td>
+
+                    <td style={{ padding: '16px 20px' }}>
+                      <button
+                        onClick={() => openEditModal(issue)}
+                        style={{
+                          backgroundColor: '#0284c7',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '8px 16px',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        ✏️ Triage &amp; Override
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Inline Supervisory Override & Proof Modal */}
+      {editingIssue && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}>
+          <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '16px', maxWidth: '580px', width: '100%', padding: '30px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)', color: '#ffffff' }}>
+            <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#ffffff', marginBottom: '6px' }}>
+              Supervisory Override for Ticket #{editingIssue.id}
+            </h2>
+            <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '20px' }}>
+              Override department routing, update priority levels, and mandate resolution proof.
+            </p>
+
+            {validationError && (
+              <div style={{ backgroundColor: '#450a0a', border: '1px solid #991b1b', color: '#fca5a5', padding: '12px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px' }}>
+                ⚠️ {validationError}
+              </div>
+            )}
+
+            {/* Visual Verification Audit Box */}
+            {editingIssue && editingIssue.imageAuthenticity && (
+              <div style={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', padding: '14px', marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#e2e8f0', margin: '0 0 10px 0' }}>📷 Visual Verification Audit</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px' }}>
+                  <div style={{ color: '#94a3b8' }}>Authenticity Score:</div>
+                  <div style={{ fontWeight: '700', color: editingIssue.imageAuthenticity.authenticityScore >= 80 ? '#6ee7b7' : '#fca5a5' }}>
+                    {editingIssue.imageAuthenticity.authenticityScore}%
+                  </div>
+                  <div style={{ color: '#94a3b8' }}>AI Generated:</div>
+                  <div style={{ fontWeight: '700', color: editingIssue.imageAuthenticity.isAiGenerated ? '#fca5a5' : '#e2e8f0' }}>
+                    {editingIssue.imageAuthenticity.isAiGenerated ? 'Yes (Suspected)' : 'No'}
+                  </div>
+                  <div style={{ color: '#94a3b8' }}>Web Duplicate:</div>
+                  <div style={{ fontWeight: '700', color: editingIssue.imageAuthenticity.isWebDuplicate ? '#fca5a5' : '#e2e8f0' }}>
+                    {editingIssue.imageAuthenticity.isWebDuplicate ? 'Yes (Suspected)' : 'No'}
+                  </div>
+                  <div style={{ color: '#94a3b8' }}>Metadata Status:</div>
+                  <div style={{ fontWeight: '700', color: editingIssue.imageAuthenticity.hasExifData ? '#6ee7b7' : '#fcd34d' }}>
+                    {editingIssue.imageAuthenticity.hasExifData ? 'Verified (EXIF)' : 'Missing'}
+                  </div>
+                </div>
+                {editingIssue.imageAuthenticity.flags && editingIssue.imageAuthenticity.flags.length > 0 && (
+                  <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #1e293b' }}>
+                    <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>Active Flags:</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {editingIssue.imageAuthenticity.flags.map(flag => (
+                        <span key={flag} style={{ padding: '2px 6px', background: '#334155', borderRadius: '4px', fontSize: '11px', color: '#e2e8f0', fontWeight: '600' }}>
+                          {flag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>Status Transition:</label>
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value as IssueStatus)}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: '#0f172a', color: '#ffffff', fontSize: '14px', outline: 'none' }}
+                >
+                  <option value="Reported">Reported</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Resolved">Resolved (Requires Proof Upload)</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>Priority Level Override:</label>
+                <select
+                  value={editPriority}
+                  onChange={(e) => setEditPriority(e.target.value as PriorityLevel)}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: '#0f172a', color: '#ffffff', fontSize: '14px', outline: 'none' }}
+                >
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Critical">Critical</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>Reassign Target Department:</label>
+                <input
+                  type="text"
+                  value={editDepartment}
+                  onChange={(e) => setEditDepartment(e.target.value)}
+                  placeholder="e.g. Sanitation Board or Public Works Dept"
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: '#0f172a', color: '#ffffff', fontSize: '14px', boxSizing: 'border-box', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                  Official Resolution Details &amp; Action Taken {editStatus === 'Resolved' && '*'}
+                </label>
+                <textarea
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  placeholder="Provide official inspection details, work completion remarks..."
+                  rows={3}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: '#0f172a', color: '#ffffff', fontSize: '14px', boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none' }}
+                />
+              </div>
+
+              {/* Resolution Completion Proof Upload */}
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>
+                  Mandated Completion Proof Photo {editStatus === 'Resolved' && '*'}
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleProofPhotoUpload}
+                  style={{ display: 'block', width: '100%', color: '#94a3b8', fontSize: '13px' }}
+                />
+                {editProofPhoto && (
+                  <div style={{ marginTop: '10px', borderRadius: '8px', overflow: 'hidden', maxHeight: '120px', border: '1px solid #334155' }}>
+                    <img src={editProofPhoto} alt="Resolution Proof" style={{ width: '100%', objectFit: 'cover' }} />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setEditingIssue(null)}
+                style={{ padding: '12px 20px', borderRadius: '8px', border: '1px solid #334155', background: '#0f172a', color: '#94a3b8', cursor: 'pointer', fontWeight: '600' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveIssue}
+                disabled={saveLoading}
+                className="btn-primary"
+                style={{ padding: '12px 24px', fontSize: '14px' }}
+              >
+                {saveLoading ? <span className="spinner" /> : 'Save Triage &amp; Dispatch'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Report Modal */}
+      {showExportModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}>
+          <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '16px', maxWidth: '480px', width: '100%', padding: '30px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)', color: '#ffffff' }}>
+            <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#ffffff', marginBottom: '6px' }}>
+              Export Transparency Report 📄
+            </h2>
+            <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '20px' }}>
+              Generate a PDF summary of civic issues for higher authority review.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>Time Range:</label>
+                <select
+                  value={exportDateRange}
+                  onChange={(e) => setExportDateRange(e.target.value)}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: '#0f172a', color: '#ffffff', fontSize: '14px', outline: 'none' }}
+                >
+                  <option value="All">All Time</option>
+                  <option value="7days">Last 7 Days</option>
+                  <option value="30days">Last 30 Days</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>Department Filter:</label>
+                <select
+                  value={exportDepartment}
+                  onChange={(e) => setExportDepartment(e.target.value)}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: '#0f172a', color: '#ffffff', fontSize: '14px', outline: 'none' }}
+                >
+                  <option value="All">All Departments</option>
+                  <option value="Sanitation Board">Sanitation Board</option>
+                  <option value="Public Works Dept">Public Works Dept</option>
+                  <option value="Traffic Control">Traffic Control</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#cbd5e1', marginBottom: '6px' }}>Status Filter:</label>
+                <select
+                  value={exportStatus}
+                  onChange={(e) => setExportStatus(e.target.value)}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: '#0f172a', color: '#ffffff', fontSize: '14px', outline: 'none' }}
+                >
+                  <option value="All">All Statuses</option>
+                  <option value="Resolved">Resolved Issues Only</option>
+                  <option value="Pending Verification">Pending Verification</option>
+                  <option value="In Progress">Unsolved (In Progress / Reported)</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setShowExportModal(false)}
+                style={{ padding: '12px 20px', borderRadius: '8px', border: '1px solid #334155', background: '#0f172a', color: '#94a3b8', cursor: 'pointer', fontWeight: '600' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleExportPDF}
+                className="btn-primary"
+                style={{ padding: '12px 24px', fontSize: '14px', background: '#10b981', borderColor: '#10b981' }}
+              >
+                Download PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default AdminIssuesPage;
